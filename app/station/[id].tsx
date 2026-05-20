@@ -136,7 +136,30 @@ export default function StationDetailScreen() {
   const nearbyStation = useNearbyGeofence();
   const isAtThisStation = nearbyStation?.id === id;
 
-  // Motor de preços para o combustível selecionado
+  // Motor de preços: calcula mediana por combustível usando contribuições do banco
+  const FUEL_TYPES_ALL: FuelType[] = ['gasolina', 'aditivada', 'etanol', 'diesel', 'gnv'];
+
+  const livePriceMap = useMemo(() => {
+    const map: Record<string, { median: number; count: number; lastAt: Date }> = {};
+    if (!dbContributions || dbContributions.length === 0) return map;
+    for (const ft of FUEL_TYPES_ALL) {
+      const items = dbContributions.filter(c => c.fuelType === ft);
+      if (items.length === 0) continue;
+      const recent24h = items.filter(c =>
+        new Date(c.createdAt).getTime() > Date.now() - 24 * 60 * 60 * 1000
+      );
+      const use = recent24h.length > 0 ? recent24h : items;
+      const sorted = [...use].map(c => c.price).sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      const med = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+      const lastAt = use.reduce((latest, c) =>
+        new Date(c.createdAt) > new Date(latest.createdAt) ? c : latest
+      ).createdAt;
+      map[ft] = { median: parseFloat(med.toFixed(2)), count: use.length, lastAt: new Date(lastAt) };
+    }
+    return map;
+  }, [dbContributions]);
+
   const currentFuelPrices = useMemo(() => {
     if (!dbContributions) return [];
     return dbContributions.filter(c => c.fuelType === selectedFuel);
@@ -155,10 +178,26 @@ export default function StationDetailScreen() {
     );
   }
 
-  const selectedPrice = station.prices.find(p => p.type === selectedFuel);
+  // Mescla preços ao vivo (DB) com estáticos: DB tem prioridade
+  const FUEL_TYPES_ORDERED: FuelType[] = ['gasolina', 'aditivada', 'etanol', 'diesel', 'gnv'];
+  const displayPrices = (() => {
+    const result: { type: FuelType; price: number; updatedAt: Date; confirmations: number; isLive: boolean }[] = [];
+    for (const ft of FUEL_TYPES_ORDERED) {
+      const live = livePriceMap[ft];
+      if (live) {
+        result.push({ type: ft, price: live.median, updatedAt: live.lastAt, confirmations: live.count, isLive: true });
+      } else {
+        const staticP = station.prices.find(p => p.type === ft);
+        if (staticP) result.push({ ...staticP, isLive: false });
+      }
+    }
+    return result;
+  })();
+
+  const selectedPrice = displayPrices.find(p => p.type === selectedFuel);
   const priceCategory = selectedPrice ? getPriceCategory(selectedPrice.price) : 'medium';
   const priceColor = getPriceCategoryColor(priceCategory);
-  const selectedConfidence = selectedPrice ? getPriceConfidence(selectedPrice) : null;
+  const selectedConfidence = selectedPrice && !selectedPrice.isLive ? getPriceConfidence(selectedPrice) : null;
   const history = station.priceHistory[selectedFuel];
   const avgRating = station.reviews.length > 0
     ? station.reviews.reduce((s, r) => s + r.rating, 0) / station.reviews.length
@@ -275,10 +314,14 @@ export default function StationDetailScreen() {
         {/* Preços */}
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Preços</Text>
         <View style={[styles.pricesCard, { backgroundColor: colors.surface, borderRadius: tokens.radius.md, ...tokens.shadows.soft }]}>
-          {station.prices.map((p, i) => {
+          {displayPrices.length === 0 ? (
+            <Text style={[styles.priceTime, { color: colors.muted, padding: 16, textAlign: 'center' }]}>
+              Sem preços disponíveis — contribua reportando!
+            </Text>
+          ) : displayPrices.map((p, i) => {
             const cat = getPriceCategory(p.price);
             const pc = getPriceCategoryColor(cat);
-            const outdated = isOutdated(p.updatedAt);
+            const outdated = !p.isLive && isOutdated(p.updatedAt);
             const isSelected = p.type === selectedFuel;
             return (
               <Pressable
@@ -286,7 +329,7 @@ export default function StationDetailScreen() {
                 onPress={() => setSelectedFuel(p.type)}
                 style={({ pressed }) => [
                   styles.priceRow,
-                  i < station.prices.length - 1 && { borderBottomWidth: 0.5, borderBottomColor: colors.border },
+                  i < displayPrices.length - 1 && { borderBottomWidth: 0.5, borderBottomColor: colors.border },
                   isSelected && { backgroundColor: colors.primary + '10' },
                   { opacity: pressed ? 0.8 : 1 },
                 ]}
@@ -294,9 +337,13 @@ export default function StationDetailScreen() {
                 <Text style={styles.fuelIcon}>{FUEL_TYPE_ICONS[p.type]}</Text>
                 <Text style={[styles.fuelName, { color: colors.foreground }]}>{FUEL_TYPE_LABELS[p.type]}</Text>
                 <View style={styles.priceRight}>
-                  {outdated && (
+                  {p.isLive ? (
+                    <View style={{ backgroundColor: colors.success + '25', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 }}>
+                      <Text style={{ fontSize: 9, color: colors.success, fontWeight: '700', letterSpacing: 0.3 }}>AO VIVO</Text>
+                    </View>
+                  ) : outdated ? (
                     <IconSymbol name="exclamationmark.triangle.fill" size={12} color={colors.warning} />
-                  )}
+                  ) : null}
                   <Text style={[styles.priceTime, { color: outdated ? colors.warning : colors.muted }]}>
                     {formatTimeAgo(p.updatedAt)}
                   </Text>

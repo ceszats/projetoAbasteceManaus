@@ -4,9 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { STATIONS } from "../data/stations";
 
-const stationIds = new Set(STATIONS.map((station) => station.id));
 const priceSchema = z.coerce
   .number()
   .min(3, "Preco abaixo do esperado")
@@ -73,7 +71,7 @@ export const appRouter = router({
     add: protectedProcedure
       .input(
         z.object({
-          stationId: z.string().refine((id) => stationIds.has(id), "Posto nao encontrado"),
+          stationId: z.string().min(1, "stationId obrigatório"),
           fuelType: z.enum(["gasolina", "aditivada", "etanol", "diesel", "gnv"]),
           price: priceSchema,
         })
