@@ -184,8 +184,6 @@ export default function StationDetailScreen() {
     router.push(`/report/${station.id}` as any);
   };
 
-  const confirmMutation = trpc.contributions.confirm.useMutation();
-
   const handleDirections = () => setShowRoute(true);
 
   return (

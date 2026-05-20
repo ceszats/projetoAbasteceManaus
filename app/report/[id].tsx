@@ -35,7 +35,7 @@ export default function ReportPriceScreen() {
 
   const addContribution = trpc.contributions.add.useMutation({
     onSuccess: (_, variables) => {
-      dispatch({ type: 'REPORT_PRICE', stationId: id, fuelType: selectedFuel, price: variables.price });
+      dispatch({ type: 'REPORT_PRICE', stationId: id as string, fuelType: selectedFuel, price: Number(variables.price) });
       setSubmitted(true);
     },
     onError: (err) => {
