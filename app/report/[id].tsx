@@ -15,6 +15,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/hooks/theme/use-colors';
 import { useApp } from '@/context/AppContext';
 import { STATIONS, FuelType, FUEL_TYPE_LABELS, FUEL_TYPE_ICONS } from '@/data/stations';
+import { trpc } from '@/lib/trpc';
 import * as Haptics from 'expo-haptics';
 
 const FUEL_TYPES: FuelType[] = ['gasolina', 'aditivada', 'etanol', 'diesel', 'gnv'];
@@ -31,6 +32,16 @@ export default function ReportPriceScreen() {
   const [priceInput, setPriceInput] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+
+  const addContribution = trpc.contributions.add.useMutation({
+    onSuccess: (_, variables) => {
+      dispatch({ type: 'REPORT_PRICE', stationId: id, fuelType: selectedFuel, price: variables.price });
+      setSubmitted(true);
+    },
+    onError: (err) => {
+      setError(err.message);
+    }
+  });
 
   if (!station) {
     return (
@@ -50,8 +61,12 @@ export default function ReportPriceScreen() {
     }
     setError('');
     if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    dispatch({ type: 'REPORT_PRICE', stationId: id, fuelType: selectedFuel, price });
-    setSubmitted(true);
+    
+    addContribution.mutate({
+      stationId: id as string,
+      fuelType: selectedFuel,
+      price: price
+    });
   };
 
   if (submitted) {

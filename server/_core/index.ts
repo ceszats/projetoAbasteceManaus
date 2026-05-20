@@ -8,6 +8,11 @@ import { registerSocialOAuthRoutes } from "./socialOAuth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { getAllowedOrigins, rateLimit, securityHeaders } from "./security";
+import { syncSefazPrices } from "../sefaz-sync";
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -28,6 +33,27 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
+/**
+ * Job agendado da SEFAZ — roda em background, não bloqueia o servidor.
+ * Loop while(true) + await sleep() é mais seguro que setInterval para
+ * operações assíncronas longas (evita sobreposição de execuções).
+ */
+async function startSefazJob(): Promise<void> {
+  // Aguarda 30s para o banco estabilizar antes do primeiro sync
+  await sleep(30_000);
+
+  while (true) {
+    try {
+      const result = await syncSefazPrices();
+      console.log(`[SEFAZ] Job: ${result.synced} salvos, ${result.skipped} ignorados, ${result.errors.length} erros`);
+    } catch (err) {
+      console.error("[SEFAZ] Erro fatal no job:", err);
+    }
+    // Aguarda 6 horas até o próximo ciclo
+    await sleep(6 * 60 * 60 * 1000);
+  }
+}
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
@@ -38,7 +64,7 @@ async function startServer() {
   // Enable CORS for all routes
   app.use((req, res, next) => {
     const origin = req.headers.origin;
-    
+
     if (origin) {
       if (isDev) {
         res.header("Access-Control-Allow-Origin", origin);
@@ -77,8 +103,8 @@ async function startServer() {
   // --- MOCK OAUTH PORTAL ---
   if (isDev) {
     app.get("/app-auth", (req, res) => {
-    const { redirectUri, state } = req.query;
-    res.send(`
+      const { redirectUri, state } = req.query;
+      res.send(`
       <html>
         <head>
           <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -103,7 +129,6 @@ async function startServer() {
               const code = "mock_code_" + provider;
               const state = "${state || ""}";
               const redirectUri = "${redirectUri || ""}";
-              // Redireciona de volta para o App usando o Deep Link
               window.location.href = redirectUri + "?code=" + code + "&state=" + state;
             }
           </script>
@@ -112,8 +137,8 @@ async function startServer() {
     `);
     });
 
-  // --- MOCK OAUTH API ENDPOINTS ---
-    app.post("/webdev.v1.WebDevAuthPublicService/ExchangeToken", (req, res) => {
+    // --- MOCK OAUTH API ENDPOINTS ---
+    app.post("/webdev.v1.WebDevAuthPublicService/ExchangeToken", (_req, res) => {
       res.json({
         accessToken: "mock_access_token_" + Date.now(),
         tokenType: "Bearer",
@@ -155,6 +180,9 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`[api] server listening on port ${port}`);
+
+    // Inicia o job da SEFAZ em background — não bloqueia o boot do servidor
+    startSefazJob().catch(err => console.error("[SEFAZ] Falha ao iniciar job:", err));
   });
 }
 

@@ -1,9 +1,9 @@
 import { eq, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
-import { InsertUser, users, userProfiles, contributions } from "../drizzle/schema";
+import { InsertUser, users, userProfiles, contributions, confirmations, stations } from "../drizzle/schema";
 import { ENV } from "./_core/env";
-import type { UserProfile, InsertUserProfile, Contribution, InsertContribution } from "../drizzle/schema";
+import type { UserProfile, InsertUserProfile, Contribution, InsertContribution, InsertConfirmation, InsertStation, DbStation } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -173,6 +173,19 @@ export async function addContribution(data: InsertContribution) {
   }
 }
 
+export async function addConfirmation(data: InsertConfirmation) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(confirmations).values(data);
+    return Number(result.lastInsertRowid);
+  } catch (error) {
+    console.error("Error adding confirmation:", error);
+    return null;
+  }
+}
+
 export async function getStationContributions(stationId: string) {
   const db = await getDb();
   if (!db) return [];
@@ -201,4 +214,51 @@ export async function getUserReputation(userId: number) {
     total: all.length,
     confirmed: Math.floor(all.length * 0.8), // Simulação de 80% de confirmação
   };
+}
+/**
+ * Retorna todos os postos do banco.
+ */
+export async function getAllStations(): Promise<DbStation[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(stations);
+}
+
+/**
+ * Insere ou atualiza um posto (upsert pelo id primário).
+ */
+export async function upsertStation(data: InsertStation): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    await db.insert(stations).values(data).onConflictDoUpdate({
+      target: stations.id,
+      set: {
+        name: data.name,
+        brand: data.brand,
+        address: data.address,
+        neighborhood: data.neighborhood,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        cnpj: data.cnpj,
+        amenities: data.amenities,
+        osmId: data.osmId,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error("[Database] Failed to upsert station:", error);
+    throw error;
+  }
+}
+
+/**
+ * Conta postos cadastrados.
+ */
+export async function getStationCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ id: stations.id }).from(stations);
+  return result.length;
 }

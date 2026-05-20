@@ -32,6 +32,7 @@ import { trpc } from '@/lib/trpc';
 import { usePriceEngine } from '@/hooks/fuel/use-price-engine';
 import { useNearbyGeofence } from '@/hooks/location/use-nearby-geofence';
 import { PriceConfirmBanner } from '@/components/fuel/PriceConfirmBanner';
+import { RouteModal } from '@/components/navigation/RouteModal';
 import * as Haptics from 'expo-haptics';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -108,6 +109,7 @@ export default function StationDetailScreen() {
   const { colors, tokens } = useTheme();
   const { state, dispatch } = useApp();
   const [selectedFuel, setSelectedFuel] = useState<FuelType>('gasolina');
+  const [showRoute, setShowRoute] = useState(false);
 
   const station = useMemo(() => {
     const s = state.stations.find(s => s.id === id);
@@ -182,14 +184,9 @@ export default function StationDetailScreen() {
     router.push(`/report/${station.id}` as any);
   };
 
-  const handleDirections = () => {
-    const url = Platform.OS === 'ios'
-      ? `maps://app?daddr=${station.latitude},${station.longitude}`
-      : `geo:${station.latitude},${station.longitude}?q=${encodeURIComponent(station.name)}`;
-    Linking.openURL(url).catch(() => {
-      Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`);
-    });
-  };
+  const confirmMutation = trpc.contributions.confirm.useMutation();
+
+  const handleDirections = () => setShowRoute(true);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -431,6 +428,18 @@ export default function StationDetailScreen() {
           <Text style={styles.directionsBtnText}>Como Chegar</Text>
         </Pressable>
       </View>
+
+      {/* Modal de navegação in-app */}
+      {station && (
+        <RouteModal
+          visible={showRoute}
+          onClose={() => setShowRoute(false)}
+          stationName={station.name}
+          stationBrand={station.brand}
+          destination={{ latitude: station.latitude, longitude: station.longitude }}
+          userLocation={state.userLocation}
+        />
+      )}
     </View>
   );
 }

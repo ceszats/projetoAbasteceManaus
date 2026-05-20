@@ -1,5 +1,26 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, real } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
+
+/**
+ * Postos de combustível — populados pelo seed Overpass e enriquecidos pela SEFAZ
+ */
+export const stations = sqliteTable("stations", {
+  id: text("id").primaryKey(),                          // "osm-123" ou "cnpj-12345678000100"
+  name: text("name").notNull(),
+  brand: text("brand").notNull().default("Independente"),
+  address: text("address").notNull().default("Endereço não cadastrado"),
+  neighborhood: text("neighborhood").notNull().default("Manaus"),
+  latitude: real("latitude").notNull(),
+  longitude: real("longitude").notNull(),
+  cnpj: text("cnpj"),                                   // CNPJ sem pontuação, opcional
+  amenities: text("amenities").notNull().default("[]"), // JSON array
+  osmId: text("osmId"),                                 // ID original do OpenStreetMap
+  createdAt: text("createdAt").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: text("updatedAt").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type DbStation = typeof stations.$inferSelect;
+export type InsertStation = typeof stations.$inferInsert;
 
 /**
  * Core user table backing auth flow.
@@ -51,3 +72,17 @@ export const contributions = sqliteTable("contributions", {
 
 export type Contribution = typeof contributions.$inferSelect;
 export type InsertContribution = typeof contributions.$inferInsert;
+
+/**
+ * User confirmations for price reports
+ */
+export const confirmations = sqliteTable("confirmations", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  contributionId: integer("contributionId").notNull(),
+  userId: integer("userId").notNull(),
+  isValid: integer("isValid", { mode: 'boolean' }).notNull(),
+  createdAt: text("createdAt").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type Confirmation = typeof confirmations.$inferSelect;
+export type InsertConfirmation = typeof confirmations.$inferInsert;

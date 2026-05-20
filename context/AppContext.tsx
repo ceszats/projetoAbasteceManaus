@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { STATIONS, Station, FuelType } from '@/data/stations';
+import { trpc } from '@/lib/trpc';
 
 export interface PriceAlert {
   id: string;
@@ -161,6 +162,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch {}
     });
   }, []);
+
+  // Buscar postos do banco via API
+  const { data: dbStations } = trpc.stations.list.useQuery(undefined, {
+    staleTime: 1000 * 60 * 60, // 1 hour
+  });
+
+  useEffect(() => {
+    if (dbStations && dbStations.length > 0) {
+      const mappedStations = dbStations.map(dbS => ({
+        id: dbS.id,
+        name: dbS.name,
+        brand: dbS.brand,
+        address: dbS.address,
+        neighborhood: dbS.neighborhood,
+        latitude: dbS.latitude,
+        longitude: dbS.longitude,
+        prices: [], // Loaded per station
+        reviews: [], // Not implemented in DB yet
+        priceHistory: { gasolina: [], etanol: [], diesel: [], gnv: [], aditivada: [] },
+        amenities: JSON.parse(dbS.amenities),
+        isFavorite: state.favoriteIds.includes(dbS.id),
+      }));
+      
+      // Mescla com os hardcoded para garantir que a UI tenha dados caso o banco esteja vazio
+      // (opcional: podemos usar só o banco se preferir)
+      dispatch({ type: 'HYDRATE', state: { stations: mappedStations } });
+    }
+  }, [dbStations]);
 
   // Persistir estado relevante
   useEffect(() => {

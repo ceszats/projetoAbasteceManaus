@@ -101,6 +101,9 @@ export const appRouter = router({
   }),
 
   stations: router({
+    list: publicProcedure.query(async () => {
+      return db.getAllStations();
+    }),
     prices: publicProcedure
       .input(z.object({ stationId: z.string() }))
       .query(async ({ input }) => {
