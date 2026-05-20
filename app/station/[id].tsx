@@ -16,7 +16,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useTheme } from '@/hooks/theme/use-theme';
 import { useApp } from '@/context/AppContext';
 import {
-  STATIONS,
   FUEL_TYPE_LABELS,
   FUEL_TYPE_ICONS,
   getPriceCategory,
@@ -102,6 +101,8 @@ function StarRating({ rating, size = 14 }: { rating: number; size?: number }) {
   );
 }
 
+const FUEL_TYPES_ALL: FuelType[] = ['gasolina', 'aditivada', 'etanol', 'diesel', 'gnv'];
+
 export default function StationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -135,9 +136,6 @@ export default function StationDetailScreen() {
   // Hook de geofencing para saber se o usuário está no posto
   const nearbyStation = useNearbyGeofence();
   const isAtThisStation = nearbyStation?.id === id;
-
-  // Motor de preços: calcula mediana por combustível usando contribuições do banco
-  const FUEL_TYPES_ALL: FuelType[] = ['gasolina', 'aditivada', 'etanol', 'diesel', 'gnv'];
 
   const livePriceMap = useMemo(() => {
     const map: Record<string, { median: number; count: number; lastAt: Date }> = {};

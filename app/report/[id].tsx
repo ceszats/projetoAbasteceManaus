@@ -27,7 +27,7 @@ export default function ReportPriceScreen() {
   const colors = useColors();
   const { state, dispatch } = useApp();
 
-  const station = STATIONS.find(s => s.id === id);
+  const station = state.stations.find(s => s.id === id) ?? STATIONS.find(s => s.id === id);
   const [selectedFuel, setSelectedFuel] = useState<FuelType>('gasolina');
   const [priceInput, setPriceInput] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -51,7 +51,7 @@ export default function ReportPriceScreen() {
     );
   }
 
-  const existingPrice = station.prices.find(p => p.type === selectedFuel);
+  const existingPrice = station.prices?.find(p => p.type === selectedFuel);
 
   const handleSubmit = () => {
     const price = parseFloat(priceInput.replace(',', '.'));
