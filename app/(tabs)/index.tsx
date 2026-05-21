@@ -5,6 +5,7 @@ import {
   Pressable,
   StyleSheet,
   TouchableWithoutFeedback,
+  TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/layout/screen-container';
@@ -22,6 +23,7 @@ import {
   FuelType,
   Station,
   calculateDistance,
+  stationMatchesSearch,
 } from '@/data/stations';
 import * as Haptics from 'expo-haptics';
 import Map from '@/components/map';
@@ -35,8 +37,23 @@ export default function MapScreen() {
   const mapRef = useRef<any>(null);
   const hasCenteredOnUser = useRef(false);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fuelType = state.selectedFuelType;
+  const filteredStations = React.useMemo(() => {
+    const query = searchQuery.trim();
+    if (!query) return state.stations;
+    return state.stations.filter((station) => stationMatchesSearch(station, query));
+  }, [searchQuery, state.stations]);
+  const cheapestStation = React.useMemo(() => {
+    return filteredStations
+      .filter((station) => station.prices.some((price) => price.type === fuelType))
+      .sort((a, b) => {
+        const priceA = a.prices.find((price) => price.type === fuelType)?.price ?? 999;
+        const priceB = b.prices.find((price) => price.type === fuelType)?.price ?? 999;
+        return priceA - priceB;
+      })[0] ?? null;
+  }, [filteredStations, fuelType]);
 
   const handleFuelSelect = useCallback((type: FuelType) => {
     dispatch({ type: 'SET_FUEL_TYPE', fuelType: type });
@@ -60,6 +77,18 @@ export default function MapScreen() {
     mapRef.current?.animateToRegion(target, 800);
   }, [state.userLocation]);
 
+  const handleCheapestStation = useCallback(() => {
+    if (!cheapestStation) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setSelectedStation(cheapestStation);
+    mapRef.current?.animateToRegion({
+      latitude: cheapestStation.latitude,
+      longitude: cheapestStation.longitude,
+      latitudeDelta: 0.035,
+      longitudeDelta: 0.035,
+    }, 700);
+  }, [cheapestStation]);
+
   useEffect(() => {
     if (!state.userLocation || hasCenteredOnUser.current) return;
     const target = {
@@ -72,6 +101,24 @@ export default function MapScreen() {
     hasCenteredOnUser.current = true;
   }, [state.userLocation]);
 
+  useEffect(() => {
+    if (!searchQuery.trim()) return;
+
+    if (selectedStation && !filteredStations.some((station) => station.id === selectedStation.id)) {
+      setSelectedStation(null);
+    }
+
+    const firstStation = filteredStations[0];
+    if (!firstStation) return;
+
+    mapRef.current?.animateToRegion({
+      latitude: firstStation.latitude,
+      longitude: firstStation.longitude,
+      latitudeDelta: 0.035,
+      longitudeDelta: 0.035,
+    }, 650);
+  }, [filteredStations, searchQuery, selectedStation]);
+
   const handleViewDetail = useCallback((station: Station) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push(`/station/${station.id}` as any);
@@ -83,7 +130,7 @@ export default function MapScreen() {
       <Map
         mapRef={mapRef}
         initialRegion={MANAUS_CENTER}
-        stations={state.stations}
+        stations={filteredStations}
         fuelType={fuelType}
         onMarkerPress={handleMarkerPress}
         userLocation={state.userLocation}
@@ -97,6 +144,27 @@ export default function MapScreen() {
             <Text style={[styles.appCity, { color: colors.primary }]}>Manaus</Text>
           </View>
         </View>
+        <View style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <IconSymbol name="magnifyingglass" size={15} color={colors.muted} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Buscar posto ou bairro no mapa"
+            placeholderTextColor={colors.muted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+              <IconSymbol name="xmark.circle.fill" size={16} color={colors.muted} />
+            </Pressable>
+          )}
+        </View>
+        {searchQuery.trim() ? (
+          <Text style={[styles.searchCount, { color: colors.muted }]}>
+            {filteredStations.length} posto{filteredStations.length !== 1 ? 's' : ''} no mapa
+          </Text>
+        ) : null}
         <FuelTypeFilter selected={fuelType} onSelect={handleFuelSelect} />
       </View>
 
@@ -124,6 +192,23 @@ export default function MapScreen() {
       </Pressable>
 
       {/* Bottom sheet de prévia do posto */}
+      {cheapestStation ? (
+        <Pressable
+          onPress={handleCheapestStation}
+          style={({ pressed }) => [
+            styles.cheapestBtn,
+            {
+              backgroundColor: colors.primary,
+              opacity: pressed ? 0.85 : 1,
+              bottom: insets.bottom + 76,
+            },
+          ]}
+        >
+          <IconSymbol name="fuelpump.fill" size={16} color="#fff" />
+          <Text style={styles.cheapestBtnText}>Mais barato</Text>
+        </Pressable>
+      ) : null}
+
       {selectedStation && (() => {
         const price = selectedStation.prices.find(p => p.type === fuelType);
         const cat = price ? getPriceCategory(price.price) : 'medium';
@@ -326,6 +411,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 18,
   },
+  searchBox: {
+    minHeight: 40,
+    marginHorizontal: 16,
+    marginBottom: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 18,
+    padding: 0,
+  },
+  searchCount: {
+    paddingHorizontal: 18,
+    paddingBottom: 4,
+    fontSize: 12,
+    lineHeight: 16,
+  },
   // Map pins
   pin: {
     paddingHorizontal: 7,
@@ -419,6 +528,29 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 4,
     elevation: 4,
+  },
+  cheapestBtn: {
+    position: 'absolute',
+    right: 16,
+    minHeight: 42,
+    paddingHorizontal: 13,
+    borderRadius: 21,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.14,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  cheapestBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 18,
   },
   // Bottom sheet
   bottomSheet: {

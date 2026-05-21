@@ -13,7 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/layout/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/hooks/theme/use-colors';
-import { useApp } from '@/context/AppContext';
+import { PriceAlert, UserContribution, useApp } from '@/context/AppContext';
+import { STATIONS } from '@/data/stations';
 import { startOAuthLogin } from '@/constants/oauth';
 import * as Haptics from 'expo-haptics';
 
@@ -22,7 +23,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { state, dispatch } = useApp();
-  const [loading, setLoading] = useState<'google' | 'facebook' | null>(null);
+  const [loading, setLoading] = useState<'google' | 'facebook' | 'demo' | null>(null);
   const [error, setError] = useState('');
 
   // Redireciona para o app se o usuário já estiver logado
@@ -48,6 +49,49 @@ export default function LoginScreen() {
     } finally {
       setLoading(null);
     }
+  };
+
+  const handleDemoLogin = () => {
+    setLoading('demo');
+    setError('');
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const demoStations = STATIONS.slice(0, 5);
+    const demoAlerts: PriceAlert[] = demoStations.slice(0, 2).map((station, index) => ({
+      id: `demo-alert-${station.id}`,
+      fuelType: index === 0 ? 'gasolina' : 'etanol',
+      maxPrice: index === 0 ? 6.05 : 4.35,
+      stationId: station.id,
+      active: true,
+      createdAt: new Date(Date.now() - (index + 1) * 60 * 60 * 1000),
+    }));
+    const demoContributions: UserContribution[] = demoStations.slice(0, 4).map((station, index) => {
+      const fuelType = index % 2 === 0 ? 'gasolina' : 'etanol';
+      const currentPrice = station.prices.find((price) => price.type === fuelType)?.price ?? 6;
+      return {
+        stationId: station.id,
+        fuelType,
+        price: Number((currentPrice - 0.03).toFixed(2)),
+        date: new Date(Date.now() - (index + 2) * 45 * 60 * 1000),
+      };
+    });
+
+    dispatch({
+      type: 'HYDRATE',
+      state: {
+        user: {
+          id: 0,
+        name: 'Usuário Demonstração',
+          email: 'demo@abastece.local',
+          openId: 'demo-local',
+        },
+        favoriteIds: demoStations.slice(0, 3).map((station) => station.id),
+        alerts: demoAlerts,
+        contributions: demoContributions,
+        comparatorIds: demoStations.slice(0, 2).map((station) => station.id),
+      },
+    });
+    router.replace('/(tabs)');
   };
 
   return (
@@ -87,6 +131,27 @@ export default function LoginScreen() {
         {/* Login buttons */}
         <View style={styles.buttonContainer}>
           <Text style={[styles.loginTitle, { color: colors.foreground }]}>Faça login com</Text>
+
+          <Pressable
+            onPress={handleDemoLogin}
+            disabled={loading !== null}
+            style={({ pressed }) => [
+              styles.demoButton,
+              {
+                backgroundColor: colors.primary,
+                opacity: pressed || loading !== null ? 0.82 : 1,
+              },
+            ]}
+          >
+            {loading === 'demo' ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <IconSymbol name="shield.fill" size={18} color="#fff" />
+                <Text style={styles.demoButtonText}>Entrar em modo demonstração</Text>
+              </>
+            )}
+          </Pressable>
 
           {/* Google button */}
           <Pressable
@@ -152,24 +217,6 @@ export default function LoginScreen() {
           </Text>
         </View>
 
-        {/* Skip login */}
-        {__DEV__ ? (
-        <Pressable
-          onPress={() => {
-            // Define um usuário demo para que o AuthGuard não redirecione de volta para o login
-            dispatch({
-              type: 'SET_USER',
-              user: { id: 0, name: 'Demo', email: null, openId: 'demo' },
-            });
-          }}
-          style={({ pressed }) => [
-            styles.skipButton,
-            { opacity: pressed ? 0.6 : 1 },
-          ]}
-        >
-          <Text style={[styles.skipButtonText, { color: colors.muted }]}>Entrar sem login</Text>
-        </Pressable>
-        ) : null}
       </ScrollView>
     </ScreenContainer>
   );
@@ -253,6 +300,20 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1.5,
   },
+  demoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 15,
+    borderRadius: 14,
+  },
+  demoButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 21,
+  },
   oauthButtonText: {
     fontSize: 16,
     fontWeight: '600',
@@ -278,15 +339,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     textAlign: 'center',
-  },
-  skipButton: {
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  skipButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 19,
-    textDecorationLine: 'underline',
   },
 });

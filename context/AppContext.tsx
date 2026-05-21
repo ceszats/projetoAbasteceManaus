@@ -63,7 +63,7 @@ const initialState: AppState = {
   contributions: [],
   selectedFuelType: 'gasolina',
   sortBy: 'price',
-  maxDistance: 10,
+  maxDistance: 50,
   userLocation: null,
   comparatorIds: [],
   user: null,
@@ -156,7 +156,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           contributions: (saved.contributions ?? []).map((c: UserContribution) => ({ ...c, date: new Date(c.date) })),
           selectedFuelType: saved.selectedFuelType ?? 'gasolina',
           sortBy: saved.sortBy ?? 'price',
-          maxDistance: saved.maxDistance ?? 10,
+          maxDistance: Math.max(saved.maxDistance ?? 50, 50),
           comparatorIds: saved.comparatorIds ?? [],
         }});
       } catch {}

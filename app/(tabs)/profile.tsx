@@ -18,7 +18,7 @@ import { GamificationBadge } from '@/components/gamification/GamificationBadge';
 import { useTheme } from '@/hooks/theme/use-theme';
 import { trpc } from '@/lib/trpc';
 import { useApp, PriceAlert } from '@/context/AppContext';
-import { STATIONS, FuelType, FUEL_TYPE_LABELS, FUEL_TYPE_ICONS } from '@/data/stations';
+import { FuelType, FUEL_TYPE_LABELS, FUEL_TYPE_ICONS, stationMatchesSearch } from '@/data/stations';
 import { useColorScheme } from '@/hooks/theme/use-color-scheme';
 import { useThemeContext } from '@/lib/theme-provider';
 
@@ -53,13 +53,7 @@ export default function ProfileScreen() {
 
   // Postos para o picker de alerta — favoritos primeiro
   const stationsForAlertPicker = useMemo(() => {
-    const q = stationSearch.toLowerCase();
-    const matched = state.stations.filter(
-      s =>
-        s.name.toLowerCase().includes(q) ||
-        s.neighborhood.toLowerCase().includes(q) ||
-        s.brand.toLowerCase().includes(q),
-    );
+    const matched = state.stations.filter(s => stationMatchesSearch(s, stationSearch));
     return matched.sort((a, b) => {
       const aFav = state.favoriteIds.includes(a.id) ? 0 : 1;
       const bFav = state.favoriteIds.includes(b.id) ? 0 : 1;

@@ -24,6 +24,7 @@ import {
   getPriceCategoryColor,
   calculateDistance,
   MANAUS_CENTER,
+  stationMatchesSearch,
 } from '@/data/stations';
 import * as Haptics from 'expo-haptics';
 
@@ -57,12 +58,7 @@ export default function CompareScreen() {
   const station2 = stationsWithDistance.find(s => s.id === comparatorIds[1]);
 
   const filteredStations = useMemo(() => {
-    const q = searchQuery.toLowerCase();
-    const matched = stationsWithDistance.filter(s =>
-      s.name.toLowerCase().includes(q) ||
-      s.neighborhood.toLowerCase().includes(q) ||
-      s.brand.toLowerCase().includes(q)
-    );
+    const matched = stationsWithDistance.filter(s => stationMatchesSearch(s, searchQuery));
     // Favoritos sempre primeiro
     return matched.sort((a, b) => {
       const aFav = state.favoriteIds.includes(a.id) ? 0 : 1;

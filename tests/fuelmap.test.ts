@@ -7,6 +7,7 @@ import {
   calculateDistance,
   STATIONS,
   MANAUS_CENTER,
+  stationMatchesSearch,
 } from '../data/stations';
 
 describe('getPriceCategory', () => {
@@ -110,6 +111,27 @@ describe('STATIONS data', () => {
         expect(p.price).toBeLessThan(10);
       });
     });
+  });
+
+  it('enriches OSM stations with searchable Manaus neighborhoods', () => {
+    const neighborhoods = new Set(STATIONS.map(s => s.neighborhood));
+
+    expect(neighborhoods.size).toBeGreaterThan(1);
+    expect(neighborhoods.has('Manaus')).toBe(false);
+  });
+
+  it('matches stations by neighborhood without accents', () => {
+    const station = STATIONS.find(s => s.neighborhood === 'Sao Jose Operario');
+
+    expect(station).toBeTruthy();
+    expect(stationMatchesSearch(station!, 'sao jose')).toBe(true);
+  });
+
+  it('keeps mock prices fresh enough for local demos', () => {
+    const prices = STATIONS.flatMap(s => s.prices);
+    const freshPrices = prices.filter(p => !isOutdated(p.updatedAt));
+
+    expect(freshPrices.length).toBeGreaterThan(prices.length * 0.6);
   });
 });
 

@@ -7,12 +7,52 @@ import type { UserProfile, InsertUserProfile, Contribution, InsertContribution, 
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+function ensureLocalSchema(sqlite: Database.Database) {
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+      openId text NOT NULL,
+      name text,
+      email text,
+      loginMethod text,
+      role text DEFAULT 'user' NOT NULL,
+      createdAt text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      updatedAt text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      lastSignedIn text DEFAULT CURRENT_TIMESTAMP NOT NULL
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS users_openId_unique ON users (openId);
+
+    CREATE TABLE IF NOT EXISTS userProfiles (
+      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+      userId integer NOT NULL,
+      profilePictureUrl text,
+      oauthProvider text NOT NULL,
+      oauthId text NOT NULL,
+      createdAt text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      updatedAt text DEFAULT CURRENT_TIMESTAMP NOT NULL
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS userProfiles_userId_unique ON userProfiles (userId);
+
+    CREATE TABLE IF NOT EXISTS contributions (
+      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+      userId integer NOT NULL,
+      stationId text NOT NULL,
+      fuelType text NOT NULL,
+      price text NOT NULL,
+      createdAt text DEFAULT CURRENT_TIMESTAMP NOT NULL
+    );
+  `);
+}
+
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
       const sqlitePath = process.env.DATABASE_URL.replace("file:", "");
       const sqlite = new Database(sqlitePath);
+      ensureLocalSchema(sqlite);
       _db = drizzle(sqlite);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);

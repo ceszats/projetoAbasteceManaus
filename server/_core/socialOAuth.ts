@@ -132,22 +132,59 @@ function redirectWithSession(res: Response, redirectUri: string, sessionToken: s
   res.redirect(url.toString());
 }
 
+async function redirectWithDevSession(res: Response, provider: Provider, redirectUri: string) {
+  const profile = {
+    openId: `${provider}-mock-id-${provider === "google" ? "123" : "456"}`,
+    name: provider === "google" ? "Teste Google" : "Teste Facebook",
+    email: provider === "google" ? "google@teste.com" : "facebook@teste.com",
+    loginMethod: provider,
+  };
+
+  await upsertUser({
+    ...profile,
+    lastSignedIn: new Date().toISOString(),
+  });
+
+  const savedUser = await getUserByOpenId(profile.openId);
+  const sessionToken = await sdk.createSessionToken(profile.openId, {
+    name: profile.name,
+    expiresInMs: ONE_YEAR_MS,
+  });
+
+  const user = {
+    id: savedUser?.id ?? null,
+    ...profile,
+    lastSignedIn: savedUser?.lastSignedIn ?? new Date().toISOString(),
+  };
+
+  redirectWithSession(res, redirectUri, sessionToken, user);
+}
+
 export function registerSocialOAuthRoutes(app: Express) {
   app.get("/api/oauth/:provider/start", (req: Request, res: Response) => {
     const provider = req.params.provider as Provider;
     const config = providers[provider];
     const redirectUri = typeof req.query.redirectUri === "string" ? req.query.redirectUri : "";
+    const isDev = process.env.NODE_ENV !== "production";
 
     if (!config) {
       res.status(404).json({ error: "Unsupported OAuth provider" });
       return;
     }
-    if (!config.clientId || !config.clientSecret) {
+    if ((!config.clientId || !config.clientSecret) && !isDev) {
       res.status(501).json({ error: `${provider} OAuth is not configured` });
       return;
     }
     if (!redirectUri) {
       res.status(400).json({ error: "redirectUri is required" });
+      return;
+    }
+    if (!config.clientId || !config.clientSecret) {
+      redirectWithDevSession(res, provider, redirectUri).catch((error) => {
+        res.status(500).json({
+          error: error instanceof Error ? error.message : "Dev OAuth failed",
+        });
+      });
       return;
     }
 

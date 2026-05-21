@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView, TextInput } from 'react-native';
 import { ScreenContainer } from '@/components/layout/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { FuelTypeFilter } from '@/components/fuel/FuelTypeFilter';
@@ -13,14 +13,21 @@ import {
   isOutdated,
   FuelType,
   Station,
+  stationMatchesSearch,
 } from '@/data/stations';
 
 export default function MapScreenWeb() {
   const colors = useColors();
   const router = useRouter();
   const { state, dispatch } = useApp();
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fuelType = state.selectedFuelType;
+  const filteredStations = useMemo(() => {
+    const query = searchQuery.trim();
+    if (!query) return state.stations;
+    return state.stations.filter((station) => stationMatchesSearch(station, query));
+  }, [searchQuery, state.stations]);
 
   const handleFuelSelect = useCallback((type: FuelType) => {
     dispatch({ type: 'SET_FUEL_TYPE', fuelType: type });
@@ -36,6 +43,22 @@ export default function MapScreenWeb() {
         <View style={styles.headerTitle}>
           <Text style={[styles.appName, { color: colors.primary }]}>⛽ Abastece</Text>
           <Text style={[styles.appCity, { color: colors.foreground }]}>Manaus</Text>
+        </View>
+        <View style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <IconSymbol name="magnifyingglass" size={15} color={colors.muted} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Buscar posto ou bairro no mapa"
+            placeholderTextColor={colors.muted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+              <IconSymbol name="xmark.circle.fill" size={16} color={colors.muted} />
+            </Pressable>
+          )}
         </View>
         <FuelTypeFilter selected={fuelType} onSelect={handleFuelSelect} />
       </View>
@@ -63,9 +86,13 @@ export default function MapScreenWeb() {
           </View>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Postos em Manaus</Text>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+          {searchQuery.trim()
+            ? `${filteredStations.length} posto${filteredStations.length !== 1 ? 's' : ''} encontrado${filteredStations.length !== 1 ? 's' : ''}`
+            : 'Postos em Manaus'}
+        </Text>
 
-        {state.stations.map((station) => {
+        {filteredStations.map((station) => {
           const price = station.prices?.find(p => p.type === fuelType);
           const cat = price ? getPriceCategory(price.price) : 'medium';
           const priceColor = getPriceCategoryColor(cat);
@@ -132,6 +159,24 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '400',
     lineHeight: 24,
+  },
+  searchBox: {
+    minHeight: 40,
+    marginHorizontal: 16,
+    marginBottom: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 18,
+    padding: 0,
   },
   webMapPlaceholder: {
     margin: 16,

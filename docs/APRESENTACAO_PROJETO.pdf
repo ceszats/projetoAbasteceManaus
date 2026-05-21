@@ -1,0 +1,471 @@
+%PDF-1.4
+%âãÏÓ
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R 19 0 R 21 0 R 23 0 R] /Count 9 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Length 4251 >>
+stream
+0 0.42 0.36 rg BT /F2 23 Tf 1 0 0 1 48.00 791.89 Tm (Apresentação do Projeto: Abastece Manaus) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 741.89 Tm (1. Visão geral) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 716.89 Tm (O Abastece Manaus é um aplicativo mobile/web feito para ajudar motoristas de Manaus a) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 702.39 Tm (encontrar postos de combustível, comparar preços e contribuir com informações atualizadas) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 687.89 Tm (para a comunidade.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 668.39 Tm (A proposta principal é simples:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 648.89 Tm (- mostrar postos no mapa;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 634.89 Tm (- listar postos por preço, distância ou avaliação;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 620.89 Tm (- comparar dois postos lado a lado;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 606.89 Tm (- salvar postos favoritos;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 592.89 Tm (- permitir que usuários reportem novos preços;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 578.89 Tm (- criar alertas de preço;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 564.89 Tm (- manter uma experiência parecida no Android, iOS e Web usando Expo.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 545.89 Tm (O app usa uma base local de postos de Manaus em data/stations.ts, com nome, bandeira,) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 531.39 Tm (endereço, bairro, coordenadas, combustíveis, preços, histórico, avaliações e serviços) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 516.89 Tm (disponíveis.) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 489.39 Tm (2. Tecnologias usadas) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 464.39 Tm (O projeto foi construído com:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 444.89 Tm (- Expo: ambiente principal para rodar React Native em Android, iOS e Web.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 430.89 Tm (- React Native: criação das telas e componentes visuais.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 416.89 Tm (- Expo Router: navegação por arquivos, como app/\(tabs\)/index.tsx, app/station/[id].tsx e) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 402.89 Tm (  app/report/[id].tsx.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 388.89 Tm (- TypeScript: tipagem dos dados, telas e regras.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 374.89 Tm (- React Context + Reducer: estado global do aplicativo em context/AppContext.tsx.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 360.89 Tm (- AsyncStorage: persistência local de favoritos, alertas, contribuições, filtros e) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 346.89 Tm (  comparadores.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 332.89 Tm (- Expo Location: captura da localização do usuário no app nativo.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 318.89 Tm (- React Native Maps: mapa interativo no Android/iOS.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 304.89 Tm (- tRPC + React Query: camada de API tipada entre frontend e backend.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 290.89 Tm (- Express: servidor backend.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 276.89 Tm (- Drizzle ORM + SQLite: banco para usuários, perfis OAuth e contribuições.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 262.89 Tm (- Vitest: testes automatizados.) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 235.89 Tm (3. Como rodar o projeto) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 210.89 Tm (Pré-requisitos:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 191.39 Tm (- Node.js 22;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 177.39 Tm (- pnpm via Corepack;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 163.39 Tm (- arquivo .env configurado.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 144.39 Tm (Comandos principais:) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 124.89 Tm (pnpm install) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 112.89 Tm (pnpm run dev) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 95.89 Tm (O comando pnpm run dev sobe duas partes ao mesmo tempo:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 76.39 Tm (- dev:server: inicia o backend em server/_core/index.ts;) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 4577 >>
+stream
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 791.89 Tm (- dev:metro: inicia o Expo Metro Bundler.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 772.89 Tm (Para testar:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 753.39 Tm (- no celular: usar Expo Go e ler o QR Code;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 739.39 Tm (- no navegador: pressionar w no terminal do Expo;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 725.39 Tm (- Android/iOS emulador: usar a ou i, quando o ambiente estiver configurado.) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 698.39 Tm (4. Estrutura principal do projeto) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 673.39 Tm (app/) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 661.39 Tm (_layout.tsx Configuração global do app, providers e rotas) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 649.39 Tm (login.tsx Tela de login) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 637.39 Tm (oauth/callback.tsx Retorno do login OAuth) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 625.39 Tm (\(tabs\)/) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 613.39 Tm (_layout.tsx Abas principais protegidas por login) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 601.39 Tm (index.tsx Tela do mapa) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 589.39 Tm (list.tsx Tela de listagem dos postos) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 577.39 Tm (compare.tsx Comparação entre dois postos) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 565.39 Tm (favorites.tsx Favoritos) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 553.39 Tm (profile.tsx Perfil, alertas e configurações) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 541.39 Tm (station/[id].tsx Detalhes de um posto) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 529.39 Tm (report/[id].tsx Reporte de preço) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 517.39 Tm (components/) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 505.39 Tm (StationCard.tsx Card reutilizável de posto) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 493.39 Tm (FuelTypeFilter.tsx Filtro por combustível) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 481.39 Tm (map/ Mapa nativo e fallback web) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 469.39 Tm (context/) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 457.39 Tm (AppContext.tsx Estado global do app) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 445.39 Tm (data/) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 433.39 Tm (stations.ts Base de postos e funções de cálculo) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 421.39 Tm (server/) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 409.39 Tm (routers.ts Rotas tRPC) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 397.39 Tm (db.ts Acesso ao banco) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 385.39 Tm (_core/ Infraestrutura do servidor) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 373.39 Tm (drizzle/) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 361.39 Tm (schema.ts Tabelas do banco) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 336.39 Tm (5. Fluxo de navegação) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 311.39 Tm (O app começa em app/_layout.tsx, onde são configurados os providers globais:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 291.89 Tm (- tema;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 277.89 Tm (- safe area;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 263.89 Tm (- React Query;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 249.89 Tm (- tRPC;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 235.89 Tm (- AppProvider;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 221.89 Tm (- pilha de navegação do Expo Router.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 202.89 Tm (Depois, o usuário passa pela tela de login em app/login.tsx.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 183.39 Tm (A área principal fica em app/\(tabs\)/_layout.tsx. Esse arquivo verifica se existe state.user.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 168.89 Tm (Se não existir, redireciona para /login. Quando existe usuário, libera as abas:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 149.39 Tm (- Mapa) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 135.39 Tm (- Postos) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 121.39 Tm (- Comparar) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 107.39 Tm (- Favoritos) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 93.39 Tm (- Perfil) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 74.39 Tm (Também existe a opção Entrar sem login, que cria um usuário demo no estado global para) Tj ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 8 0 R >>
+endobj
+10 0 obj
+<< /Length 4435 >>
+stream
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 791.89 Tm (facilitar apresentação e testes.) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 764.39 Tm (6. Estado global do aplicativo) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 739.39 Tm (O estado central fica em context/AppContext.tsx.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 719.89 Tm (Ele guarda:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 700.39 Tm (- lista de postos;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 686.39 Tm (- IDs dos favoritos;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 672.39 Tm (- alertas de preço;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 658.39 Tm (- contribuições do usuário;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 644.39 Tm (- combustível selecionado;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 630.39 Tm (- tipo de ordenação;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 616.39 Tm (- distância máxima do filtro;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 602.39 Tm (- localização do usuário;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 588.39 Tm (- postos selecionados para comparação;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 574.39 Tm (- usuário autenticado.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 555.39 Tm (As ações principais são:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 535.89 Tm (- TOGGLE_FAVORITE: adiciona ou remove um posto dos favoritos.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 521.89 Tm (- REPORT_PRICE: atualiza o preço de um combustível e registra uma contribuição.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 507.89 Tm (- ADD_ALERT: cria alerta de preço.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 493.89 Tm (- TOGGLE_ALERT: ativa/desativa alerta.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 479.89 Tm (- DELETE_ALERT: remove alerta.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 465.89 Tm (- SET_FUEL_TYPE: troca o combustível selecionado.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 451.89 Tm (- SET_SORT: muda a ordenação.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 437.89 Tm (- SET_MAX_DISTANCE: altera o raio de busca.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 423.89 Tm (- SET_USER_LOCATION: salva a localização atual.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 409.89 Tm (- SET_COMPARATOR_IDS: define os dois postos comparados.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 395.89 Tm (- SET_USER: salva o usuário logado ou demo.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 376.89 Tm (Parte desse estado é persistida no AsyncStorage. Assim, favoritos, alertas, contribuições e) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 362.39 Tm (filtros continuam salvos depois que o app fecha.) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 334.89 Tm (7. Base de dados dos postos) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 309.89 Tm (O arquivo data/stations.ts é a base principal do domínio.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 290.39 Tm (Ele define:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 270.89 Tm (- FuelType: tipos de combustível \(gasolina, aditivada, etanol, diesel, gnv\);) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 256.89 Tm (- FuelPrice: preço, data de atualização e quantidade de confirmações;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 242.89 Tm (- Station: estrutura completa do posto;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 228.89 Tm (- STATIONS: lista de postos;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 214.89 Tm (- funções de apoio.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 195.89 Tm (Funções importantes:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 176.39 Tm (- getPriceCategory\(price\): classifica o preço como barato, médio ou caro.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 162.39 Tm (- getPriceCategoryColor\(category\): retorna a cor usada no mapa e nos cards.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 148.39 Tm (- isOutdated\(date\): marca preço como desatualizado após 48 horas.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 134.39 Tm (- getPriceConfidence\(price\): classifica preço como confirmado, recente ou desatualizado.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 120.39 Tm (- formatTimeAgo\(date\): mostra textos como "2h atrás" ou "3d atrás".) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 106.39 Tm (- calculateDistance\(...\): calcula distância em km entre usuário e posto.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 92.39 Tm (- inferNeighborhood\(...\): tenta inferir o bairro quando o dado vem genérico.) Tj ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 10 0 R >>
+endobj
+12 0 obj
+<< /Length 3801 >>
+stream
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 783.89 Tm (8. Tela de mapa) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 758.89 Tm (Arquivo: app/\(tabs\)/index.tsx) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 739.39 Tm (Essa é a tela principal do app.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 719.89 Tm (Ela mostra:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 700.39 Tm (- mapa centralizado em Manaus;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 686.39 Tm (- filtro por tipo de combustível;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 672.39 Tm (- marcadores de postos;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 658.39 Tm (- preço direto no marcador;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 644.39 Tm (- cor do marcador conforme categoria de preço;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 630.39 Tm (- botão para centralizar na localização do usuário;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 616.39 Tm (- legenda de barato, médio e caro;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 602.39 Tm (- resumo do posto selecionado em um painel inferior.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 583.39 Tm (No Android/iOS, o mapa real vem de components/map/index.tsx usando react-native-maps.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 563.89 Tm (Na Web, existe um fallback em components/map/index.web.tsx, porque o mapa interativo foi) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 549.39 Tm (deixado disponível apenas para app nativo.) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 521.89 Tm (9. Tela de listagem) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 496.89 Tm (Arquivo: app/\(tabs\)/list.tsx) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 477.39 Tm (A tela de postos permite encontrar postos de forma mais detalhada.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 457.89 Tm (Recursos:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 438.39 Tm (- busca por nome, bairro, bandeira ou endereço;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 424.39 Tm (- filtro por combustível;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 410.39 Tm (- filtro por raio de distância;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 396.39 Tm (- opção de mostrar todos os postos;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 382.39 Tm (- filtro para mostrar somente preços confirmados;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 368.39 Tm (- ordenação por preço, distância ou avaliação;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 354.39 Tm (- contagem de resultados;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 340.39 Tm (- renderização otimizada com FlatList.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 321.39 Tm (Cada posto é exibido com StationCard, mostrando:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 301.89 Tm (- nome;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 287.89 Tm (- bairro/endereço;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 273.89 Tm (- preço do combustível selecionado;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 259.89 Tm (- distância;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 245.89 Tm (- tempo desde atualização;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 231.89 Tm (- número de confirmações;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 217.89 Tm (- selo de confiança;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 203.89 Tm (- botão de favorito.) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 176.89 Tm (10. Detalhes do posto) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 151.89 Tm (Arquivo: app/station/[id].tsx) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 132.39 Tm (Quando o usuário toca em um posto, abre a tela de detalhes.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 112.89 Tm (Ela mostra:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 93.39 Tm (- nome e bandeira;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 79.39 Tm (- endereço e bairro;) Tj ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 12 0 R >>
+endobj
+14 0 obj
+<< /Length 3974 >>
+stream
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 791.89 Tm (- distância até o usuário;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 777.89 Tm (- serviços disponíveis;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 763.89 Tm (- lista de preços por combustível;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 749.89 Tm (- status de confiança do preço;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 735.89 Tm (- histórico em gráfico quando existir histórico suficiente;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 721.89 Tm (- avaliações, quando cadastradas;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 707.89 Tm (- botão para favoritar;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 693.89 Tm (- botão para reportar preço;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 679.89 Tm (- botão para abrir rota no app de mapas.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 660.89 Tm (O botão Como Chegar abre:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 641.39 Tm (- Google Maps na Web;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 627.39 Tm (- Apple Maps no iOS;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 613.39 Tm (- intent geo: no Android, com fallback para Google Maps.) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 586.39 Tm (11. Reporte de preço) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 561.39 Tm (Arquivo: app/report/[id].tsx) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 541.89 Tm (Essa tela permite o usuário contribuir informando um novo preço.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 522.39 Tm (Fluxo:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 502.89 Tm (- Usuário escolhe o tipo de combustível.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 488.89 Tm (- Digita o preço por litro.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 474.89 Tm (- O app valida se o preço está entre R$ 1,00 e R$ 20,00.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 460.89 Tm (- Ao confirmar, dispara a ação REPORT_PRICE.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 446.89 Tm (- O preço do posto é atualizado no estado local.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 432.89 Tm (- A contribuição aparece no perfil do usuário.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 413.89 Tm (Hoje o fluxo principal de reporte atualiza o estado local do app. O backend também tem rotas) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 399.39 Tm (para contribuições, mas a tela atual está usando o AppContext diretamente.) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 371.89 Tm (12. Comparação de postos) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 346.89 Tm (Arquivo: app/\(tabs\)/compare.tsx) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 327.39 Tm (A tela de comparação permite escolher dois postos e comparar:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 307.89 Tm (- preço do combustível selecionado;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 293.89 Tm (- diferença por litro;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 279.89 Tm (- economia estimada para um tanque;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 265.89 Tm (- distância;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 251.89 Tm (- avaliação.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 232.89 Tm (O tamanho padrão do tanque é 50 litros, mas o usuário pode alterar. A economia é calculada) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 218.39 Tm (assim:) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 198.89 Tm (economia = diferença_por_litro * capacidade_do_tanque) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 181.89 Tm (Exemplo:) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 162.39 Tm (Posto A: R$ 5,90) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 150.39 Tm (Posto B: R$ 6,20) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 138.39 Tm (Diferença: R$ 0,30 por litro) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 126.39 Tm (Tanque: 50 L) Tj ET
+0.05 0.05 0.05 rg BT /F3 9 Tf 1 0 0 1 58.00 114.39 Tm (Economia estimada: R$ 15,00) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 89.39 Tm (13. Favoritos) Tj ET
+endstream
+endobj
+15 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 14 0 R >>
+endobj
+16 0 obj
+<< /Length 3983 >>
+stream
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 791.89 Tm (Arquivo: app/\(tabs\)/favorites.tsx) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 772.39 Tm (A tela de favoritos mostra todos os postos salvos pelo usuário.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 752.89 Tm (Recursos:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 733.39 Tm (- lista de postos favoritos;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 719.39 Tm (- distância calculada até cada favorito;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 705.39 Tm (- opção de limpar todos;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 691.39 Tm (- mensagem vazia quando não há favoritos;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 677.39 Tm (- indicação de variação de preço quando existe histórico suficiente.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 658.39 Tm (Favoritar um posto é feito por TOGGLE_FAVORITE, tanto no card quanto na tela de detalhes.) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 630.89 Tm (14. Perfil, alertas e tema) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 605.89 Tm (Arquivo: app/\(tabs\)/profile.tsx) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 586.39 Tm (A tela de perfil concentra:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 566.89 Tm (- identificação do usuário;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 552.89 Tm (- número de contribuições;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 538.89 Tm (- criação de alertas de preço;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 524.89 Tm (- ativar/desativar alerta;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 510.89 Tm (- excluir alerta;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 496.89 Tm (- contribuições recentes;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 482.89 Tm (- alternância de tema claro/escuro;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 468.89 Tm (- informações do app.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 449.89 Tm (Um alerta tem:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 430.39 Tm (- combustível;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 416.39 Tm (- preço máximo;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 402.39 Tm (- posto opcional;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 388.39 Tm (- status ativo/inativo;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 374.39 Tm (- data de criação.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 355.39 Tm (No estado atual, os alertas são cadastrados e persistidos localmente. A lógica de notificação) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 340.89 Tm (real pode ser uma evolução futura.) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 313.39 Tm (15. Backend e banco de dados) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 288.39 Tm (O backend fica em server/.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 268.89 Tm (Arquivo principal de rotas: server/routers.ts.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 249.39 Tm (Rotas existentes:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 229.89 Tm (- auth.me: retorna usuário autenticado.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 215.89 Tm (- auth.logout: encerra sessão limpando cookie.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 201.89 Tm (- oauth.getOrCreateUser: cria ou recupera usuário OAuth.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 187.89 Tm (- oauth.getProfile: busca perfil OAuth do usuário autenticado.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 173.89 Tm (- contributions.list: lista contribuições do usuário logado.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 159.89 Tm (- contributions.add: salva uma contribuição.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 145.89 Tm (- contributions.byStation: lista contribuições de um posto.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 126.89 Tm (O banco é definido em drizzle/schema.ts.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 107.39 Tm (Tabelas:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 87.89 Tm (- users: usuários da aplicação.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 73.89 Tm (- userProfiles: dados de provedor OAuth.) Tj ET
+endstream
+endobj
+17 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 16 0 R >>
+endobj
+18 0 obj
+<< /Length 4177 >>
+stream
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 791.89 Tm (- contributions: histórico de preços enviados pelos usuários.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 772.89 Tm (O acesso ao banco acontece em server/db.ts, usando Drizzle com SQLite via better-sqlite3.) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 745.39 Tm (16. Autenticação) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 720.39 Tm (O app tem autenticação com OAuth.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 700.89 Tm (Arquivos principais:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 681.39 Tm (- app/login.tsx: tela com login Google/Facebook e entrada demo.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 667.39 Tm (- app/oauth/callback.tsx: processa o retorno do OAuth.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 653.39 Tm (- hooks/use-auth.ts: utilitário para buscar usuário, validar sessão e fazer logout.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 639.39 Tm (- constants/oauth.ts: configuração dos provedores e URLs.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 625.39 Tm (- lib/_core/auth.ts: armazenamento de token e dados do usuário.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 606.39 Tm (Na Web, o fluxo usa cookie de sessão. No app nativo, usa token armazenado localmente.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 586.89 Tm (Para apresentação, a opção Entrar sem login é útil porque evita depender de credenciais OAuth) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 572.39 Tm (durante a demonstração.) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 544.89 Tm (17. Regras de negócio principais) Tj ET
+0.2 0.24 0.31 rg BT /F2 12.5 Tf 1 0 0 1 48.00 514.89 Tm (Classificação de preço) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 493.89 Tm (Em getPriceCategory:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 474.39 Tm (- até 6.05: barato;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 460.39 Tm (- até 6.30: médio;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 446.39 Tm (- acima disso: caro.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 427.39 Tm (Essas categorias mudam as cores dos marcadores e dos badges de preço.) Tj ET
+0.2 0.24 0.31 rg BT /F2 12.5 Tf 1 0 0 1 48.00 402.89 Tm (Confiança do preço) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 381.89 Tm (Em getPriceConfidence:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 362.39 Tm (- confirmed: atualizado até 24 horas e com pelo menos 2 confirmações;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 348.39 Tm (- recent: atualizado até 48 horas;) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 334.39 Tm (- outdated: mais de 48 horas.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 315.39 Tm (Isso ajuda o usuário a saber se o preço é confiável.) Tj ET
+0.2 0.24 0.31 rg BT /F2 12.5 Tf 1 0 0 1 48.00 290.89 Tm (Distância) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 269.89 Tm (calculateDistance usa fórmula geográfica para calcular distância aproximada entre dois) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 255.39 Tm (pontos por latitude e longitude.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 235.89 Tm (Quando o usuário não tem localização disponível, o app usa MANAUS_CENTER como referência.) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 208.39 Tm (18. Limitações atuais) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 183.39 Tm (Pontos importantes para explicar com transparência:) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 163.89 Tm (- A base de postos vem de data/stations.ts, não de uma API externa em tempo real.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 149.89 Tm (- O mapa interativo completo está disponível no Android/iOS; na Web há uma tela) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 135.89 Tm (  informativa.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 121.89 Tm (- Alertas são salvos localmente, mas ainda não disparam notificações reais.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 107.89 Tm (- Reporte de preço atualiza o estado local na interface; o backend possui rotas de) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 93.89 Tm (  contribuição para uma integração mais completa.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 79.89 Tm (- Alguns dados como avaliações e histórico podem estar vazios em muitos postos.) Tj ET
+endstream
+endobj
+19 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 18 0 R >>
+endobj
+20 0 obj
+<< /Length 4481 >>
+stream
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 791.89 Tm (- Se o usuário limpar o armazenamento local, favoritos, alertas e contribuições locais são) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 777.89 Tm (  perdidos.) Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 750.89 Tm (19. Roteiro sugerido para apresentar à equipe) Tj ET
+0.2 0.24 0.31 rg BT /F2 12.5 Tf 1 0 0 1 48.00 720.89 Tm (Abertura) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 699.89 Tm ("O Abastece Manaus é um aplicativo para ajudar motoristas a encontrar combustível mais) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 685.39 Tm (barato em Manaus, comparar postos e contribuir com preços atualizados.") Tj ET
+0.2 0.24 0.31 rg BT /F2 12.5 Tf 1 0 0 1 48.00 660.89 Tm (Demonstração prática) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 639.89 Tm (- Entrar no app usando Entrar sem login.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 625.89 Tm (- Mostrar a aba Mapa e explicar as cores dos preços.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 611.89 Tm (- Trocar o tipo de combustível no filtro.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 597.89 Tm (- Tocar em um posto e abrir detalhes.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 583.89 Tm (- Mostrar endereço, distância, preços, confiança e botão de rota.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 569.89 Tm (- Reportar um preço fictício.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 555.89 Tm (- Ir para Postos e demonstrar busca, ordenação e filtros.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 541.89 Tm (- Ir para Comparar e selecionar dois postos.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 527.89 Tm (- Mostrar cálculo de economia por tanque.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 513.89 Tm (- Favoritar um posto e mostrar em Favoritos.) Tj ET
+0 0 0 rg BT /F1 10.7 Tf 1 0 0 1 58.00 499.89 Tm (- Abrir Perfil, criar alerta e mostrar contribuições.) Tj ET
+0.2 0.24 0.31 rg BT /F2 12.5 Tf 1 0 0 1 48.00 475.89 Tm (Parte técnica) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 454.89 Tm ("Tecnicamente, o app usa Expo com React Native. A navegação é feita pelo Expo Router. O) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 440.39 Tm (estado global fica no AppContext e é salvo no AsyncStorage. A base de postos e as regras de) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 425.89 Tm (preço ficam em data/stations.ts. O backend usa tRPC, Express, Drizzle e SQLite para) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 411.39 Tm (autenticação e contribuições.") Tj ET
+0.2 0.24 0.31 rg BT /F2 12.5 Tf 1 0 0 1 48.00 386.89 Tm (Fechamento) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 365.89 Tm ("O projeto já entrega uma experiência funcional para busca, comparação e colaboração. As) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 351.39 Tm (próximas evoluções naturais seriam integrar os reportes diretamente ao backend em todas) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 336.89 Tm (as telas, ativar notificações reais para alertas e substituir a base local por uma fonte) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 322.39 Tm (dinâmica de preços.") Tj ET
+0.05 0.34 0.32 rg BT /F2 15 Tf 1 0 0 1 48.00 294.89 Tm (20. Possíveis perguntas da equipe) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 269.89 Tm (Os preços são em tempo real") Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 250.39 Tm (Ainda não. O app usa uma base local e contribuições no estado da aplicação. A estrutura de) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 235.89 Tm (backend já permite evoluir para salvar e consultar contribuições reais.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 216.39 Tm (Funciona na Web") Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 196.89 Tm (Sim, a interface roda na Web. Porém, o mapa interativo completo foi implementado para) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 182.39 Tm (Android/iOS; na Web existe um fallback informativo.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 162.89 Tm (O usuário precisa fazer login") Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 143.39 Tm (O app tem login OAuth, mas também tem entrada demo para apresentação e testes.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 123.89 Tm (Como o app sabe a distância") Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 104.39 Tm (Ele usa a localização do usuário via Expo Location no app nativo. Se não houver permissão, usa) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 89.89 Tm (o centro de Manaus como referência.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 70.39 Tm (Como um preço vira confirmado") Tj ET
+endstream
+endobj
+21 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 20 0 R >>
+endobj
+22 0 obj
+<< /Length 773 >>
+stream
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 791.89 Tm (Pela regra atual, precisa ter até 24 horas e pelo menos 2 confirmações.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 772.39 Tm (Onde os favoritos ficam salvos") Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 752.89 Tm (No AsyncStorage do dispositivo/navegador.) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 733.39 Tm (Qual seria o próximo passo técnico") Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 713.89 Tm (Conectar a tela de reporte ao endpoint contributions.add, carregar contribuições por posto) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 699.39 Tm (com contributions.byStation e usar esses dados para atualizar preços de forma) Tj ET
+0 0 0 rg BT /F1 10.8 Tf 1 0 0 1 48.00 684.89 Tm (compartilhada entre usuários.) Tj ET
+endstream
+endobj
+23 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 22 0 R >>
+endobj
+xref
+0 24
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000176 00000 n 
+0000000273 00000 n 
+0000000375 00000 n 
+0000000470 00000 n 
+0000004772 00000 n 
+0000004924 00000 n 
+0000009552 00000 n 
+0000009704 00000 n 
+0000014191 00000 n 
+0000014345 00000 n 
+0000018198 00000 n 
+0000018352 00000 n 
+0000022378 00000 n 
+0000022532 00000 n 
+0000026567 00000 n 
+0000026721 00000 n 
+0000030950 00000 n 
+0000031104 00000 n 
+0000035637 00000 n 
+0000035791 00000 n 
+0000036615 00000 n 
+trailer
+<< /Size 24 /Root 1 0 R >>
+startxref
+36769
+%%EOF

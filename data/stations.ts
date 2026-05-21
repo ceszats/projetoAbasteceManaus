@@ -40,9 +40,122 @@ export interface Station {
 
 const now = new Date();
 const hoursAgo = (h: number) => new Date(now.getTime() - h * 60 * 60 * 1000);
-const daysAgo = (d: number) => new Date(now.getTime() - d * 24 * 60 * 60 * 1000);
+const MOCK_PRICE_AGES_HOURS = [2, 5, 9, 14, 20, 28, 36, 44, 54, 72];
 
-export const STATIONS: Station[] = [
+const normalizeSearchText = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const MANAUS_NEIGHBORHOOD_CENTERS = [
+  { name: 'Centro', latitude: -3.1342, longitude: -60.0233 },
+  { name: 'Adrianopolis', latitude: -3.1038, longitude: -60.0037 },
+  { name: 'Nossa Senhora das Gracas', latitude: -3.1054, longitude: -60.0231 },
+  { name: 'Aleixo', latitude: -3.0806, longitude: -59.9914 },
+  { name: 'Parque 10 de Novembro', latitude: -3.0742, longitude: -60.0148 },
+  { name: 'Chapada', latitude: -3.0912, longitude: -60.0237 },
+  { name: 'Flores', latitude: -3.0516, longitude: -60.0044 },
+  { name: 'Cidade Nova', latitude: -3.0295, longitude: -59.9956 },
+  { name: 'Novo Aleixo', latitude: -3.0363, longitude: -59.9549 },
+  { name: 'Tancredo Neves', latitude: -3.0551, longitude: -59.9361 },
+  { name: 'Sao Jose Operario', latitude: -3.0872, longitude: -59.9465 },
+  { name: 'Coroado', latitude: -3.0839, longitude: -59.9722 },
+  { name: 'Japiim', latitude: -3.1181, longitude: -59.9909 },
+  { name: 'Distrito Industrial', latitude: -3.1259, longitude: -59.9648 },
+  { name: 'Raiz', latitude: -3.1162, longitude: -60.0028 },
+  { name: 'Cachoeirinha', latitude: -3.1122, longitude: -60.0157 },
+  { name: 'Sao Francisco', latitude: -3.1027, longitude: -60.0116 },
+  { name: 'Petropolis', latitude: -3.1011, longitude: -59.9983 },
+  { name: 'Educandos', latitude: -3.1374, longitude: -60.0141 },
+  { name: 'Armando Mendes', latitude: -3.0977, longitude: -59.9309 },
+  { name: 'Jorge Teixeira', latitude: -3.0366, longitude: -59.9294 },
+  { name: 'Zumbi dos Palmares', latitude: -3.0687, longitude: -59.9394 },
+  { name: 'Ponta Negra', latitude: -3.0736, longitude: -60.1021 },
+  { name: 'Taruma', latitude: -3.0105, longitude: -60.0799 },
+  { name: 'Taruma-Acu', latitude: -2.9656, longitude: -60.0711 },
+  { name: 'Redencao', latitude: -3.0539, longitude: -60.0449 },
+  { name: 'Alvorada', latitude: -3.0829, longitude: -60.0529 },
+  { name: 'Dom Pedro', latitude: -3.0897, longitude: -60.0441 },
+  { name: 'Compensa', latitude: -3.1079, longitude: -60.0612 },
+  { name: 'Santo Agostinho', latitude: -3.0951, longitude: -60.0701 },
+  { name: 'Planalto', latitude: -3.0687, longitude: -60.0657 },
+  { name: 'Colonia Santo Antonio', latitude: -3.0143, longitude: -60.0572 },
+  { name: 'Santa Etelvina', latitude: -2.9936, longitude: -60.0281 },
+  { name: 'Lago Azul', latitude: -2.9568, longitude: -60.0218 },
+  { name: 'Colonia Terra Nova', latitude: -2.9831, longitude: -60.0562 },
+  { name: 'Monte das Oliveiras', latitude: -2.9902, longitude: -60.0079 },
+  { name: 'Nova Cidade', latitude: -2.9948, longitude: -59.9856 },
+  { name: 'Novo Israel', latitude: -3.0018, longitude: -60.0442 },
+] as const;
+
+const ADDRESS_NEIGHBORHOODS: Array<{ match: string; neighborhood: string }> = [
+  { match: 'nossa sra das gracas', neighborhood: 'Nossa Senhora das Gracas' },
+  { match: 'nossa senhora das gracas', neighborhood: 'Nossa Senhora das Gracas' },
+  { match: 'djalma batista 535', neighborhood: 'Nossa Senhora das Gracas' },
+  { match: 'avenida tancredo neves', neighborhood: 'Parque 10 de Novembro' },
+  { match: 'avenida cosme ferreira', neighborhood: 'Sao Jose Operario' },
+  { match: 'avenida arquiteto jose henriques bento rodrigues', neighborhood: 'Monte das Oliveiras' },
+  { match: 'avenida general rodrigo otavio', neighborhood: 'Japiim' },
+  { match: 'rua conde de sergimirim', neighborhood: 'Raiz' },
+  { match: 'avenida autaz mirim', neighborhood: 'Sao Jose Operario' },
+  { match: 'avenida torquato tapajos', neighborhood: 'Santa Etelvina' },
+  { match: 'rua valerio botelho de andrade', neighborhood: 'Cachoeirinha' },
+  { match: 'avenida do turismo', neighborhood: 'Taruma' },
+  { match: 'avenida jacira reis', neighborhood: 'Dom Pedro' },
+];
+
+function inferStationNeighborhood(station: Station): string {
+  const normalizedAddress = normalizeSearchText(station.address);
+  const addressMatch = ADDRESS_NEIGHBORHOODS.find(({ match }) =>
+    normalizedAddress.includes(match),
+  );
+
+  if (addressMatch) return addressMatch.neighborhood;
+  if (station.neighborhood && station.neighborhood !== 'Manaus') return station.neighborhood;
+
+  return MANAUS_NEIGHBORHOOD_CENTERS.reduce((closest, current) => {
+    const currentDistance = calculateDistance(
+      station.latitude,
+      station.longitude,
+      current.latitude,
+      current.longitude,
+    );
+    const closestDistance = calculateDistance(
+      station.latitude,
+      station.longitude,
+      closest.latitude,
+      closest.longitude,
+    );
+    return currentDistance < closestDistance ? current : closest;
+  }).name;
+}
+
+export function stationMatchesSearch(station: Station, query: string): boolean {
+  const q = normalizeSearchText(query);
+  if (!q) return true;
+
+  return [station.name, station.brand, station.address, station.neighborhood]
+    .map(normalizeSearchText)
+    .some((value) => value.includes(q));
+}
+
+function getMockPriceUpdatedAt(stationIndex: number, priceIndex: number) {
+  const ageIndex = (stationIndex + priceIndex * 2) % MOCK_PRICE_AGES_HOURS.length;
+  return hoursAgo(MOCK_PRICE_AGES_HOURS[ageIndex]);
+}
+
+function getMockConfirmations(stationIndex: number, priceIndex: number, current: number) {
+  const ageIndex = (stationIndex + priceIndex * 2) % MOCK_PRICE_AGES_HOURS.length;
+  if (ageIndex <= 4) return Math.max(current, 2 + ((stationIndex + priceIndex) % 4));
+  if (ageIndex <= 7) return Math.max(current, 1 + ((stationIndex + priceIndex) % 3));
+  return Math.max(1, current);
+}
+
+const RAW_STATIONS: Station[] = [
   {
     "id": "osm-1366693707",
     "name": "Posto Atem",
@@ -2082,8 +2195,54 @@ export const STATIONS: Station[] = [
     "amenities": [
       "Conveniência"
     ]
+  },
+   {
+    "id": "osm-1366693708",
+    "name": "Posto Petrobras Djalma ",
+    "brand": "BR",
+    "address": "Av.Djalma Batista,535 - Nossa Sra. das Graças, Manaus - AM, 69053-355",
+    "neighborhood": "Nossa Senhora das Gracas",
+    "latitude": -3.1053934 ,
+    "longitude": -60.0230559,
+    "prices": [
+      {
+        "type": "gasolina",
+        "price": 6.34,
+        updatedAt: new Date("2026-04-09T08:29:09.145Z"),
+        "confirmations": 2
+      },
+      {
+        "type": "aditivada",
+        "price": 6.64,
+        updatedAt: new Date("2026-04-09T08:29:09.145Z"),
+        "confirmations": 2
+      },
+      {
+        "type": "etanol",
+        "price": 4.54,
+        updatedAt: new Date("2026-04-09T04:29:09.145Z"),
+        "confirmations": 3
+      }
+    ],
+    "reviews": [],
+    "priceHistory": {
+      "gasolina": []
+    },
+    "amenities": [
+      "Conveniência"
+    ]
   }
 ];
+
+export const STATIONS: Station[] = RAW_STATIONS.map((station, stationIndex) => ({
+  ...station,
+  neighborhood: inferStationNeighborhood(station),
+  prices: station.prices.map((price, priceIndex) => ({
+    ...price,
+    updatedAt: getMockPriceUpdatedAt(stationIndex, priceIndex),
+    confirmations: getMockConfirmations(stationIndex, priceIndex, price.confirmations),
+  })),
+}));
 
 export const FUEL_TYPE_LABELS: Record<FuelType, string> = {
   gasolina: 'Gasolina',
