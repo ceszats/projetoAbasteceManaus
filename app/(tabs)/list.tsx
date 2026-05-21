@@ -16,7 +16,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useTheme } from '@/hooks/theme/use-theme';
 import { useApp } from '@/context/AppContext';
 import {
-  STATIONS,
   MANAUS_CENTER,
   calculateDistance,
   getPriceConfidence,
@@ -54,12 +53,12 @@ export default function ListScreen() {
   const userLon = state.userLocation?.longitude ?? MANAUS_CENTER.longitude;
 
   const stationsWithDistance = useMemo(() => {
-    return STATIONS.map(s => ({
+    return state.stations.map(s => ({
       ...s,
       distance: calculateDistance(userLat, userLon, s.latitude, s.longitude),
       isFavorite: state.favoriteIds.includes(s.id),
     }));
-  }, [userLat, userLon, state.favoriteIds]);
+  }, [state.stations, userLat, userLon, state.favoriteIds]);
 
   const filtered = useMemo(() => {
     let list = stationsWithDistance;

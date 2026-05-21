@@ -54,7 +54,7 @@ export default function ProfileScreen() {
   // Postos para o picker de alerta — favoritos primeiro
   const stationsForAlertPicker = useMemo(() => {
     const q = stationSearch.toLowerCase();
-    const matched = STATIONS.filter(
+    const matched = state.stations.filter(
       s =>
         s.name.toLowerCase().includes(q) ||
         s.neighborhood.toLowerCase().includes(q) ||
@@ -65,9 +65,9 @@ export default function ProfileScreen() {
       const bFav = state.favoriteIds.includes(b.id) ? 0 : 1;
       return aFav - bFav;
     });
-  }, [stationSearch, state.favoriteIds]);
+  }, [stationSearch, state.stations, state.favoriteIds]);
 
-  const selectedAlertStation = alertStationId ? STATIONS.find(s => s.id === alertStationId) : null;
+  const selectedAlertStation = alertStationId ? (state.stations.find(s => s.id === alertStationId) ?? STATIONS.find(s => s.id === alertStationId)) : null;
 
   const handleCreateAlert = () => {
     const price = parseFloat(alertPrice.replace(',', '.'));
@@ -180,7 +180,7 @@ export default function ProfileScreen() {
             </View>
           ) : (
             alerts.map(alert => {
-              const station = alert.stationId ? STATIONS.find(s => s.id === alert.stationId) : null;
+              const station = alert.stationId ? (state.stations.find(s => s.id === alert.stationId) ?? STATIONS.find(s => s.id === alert.stationId)) : null;
               return (
                 <View
                   key={alert.id}
@@ -220,7 +220,7 @@ export default function ProfileScreen() {
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Contribuições Recentes</Text>
             {contributions.slice(0, 5).map((c, i) => {
-              const station = STATIONS.find(s => s.id === c.stationId);
+              const station = state.stations.find(s => s.id === c.stationId) ?? STATIONS.find(s => s.id === c.stationId);
               return (
                 <View
                   key={i}

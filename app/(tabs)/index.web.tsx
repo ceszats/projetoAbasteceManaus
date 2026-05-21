@@ -7,7 +7,6 @@ import { useColors } from '@/hooks/theme/use-colors';
 import { useApp } from '@/context/AppContext';
 import { useRouter } from 'expo-router';
 import {
-  STATIONS,
   getPriceCategory,
   getPriceCategoryColor,
   formatTimeAgo,
@@ -66,8 +65,8 @@ export default function MapScreenWeb() {
 
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Postos em Manaus</Text>
 
-        {STATIONS.map((station) => {
-          const price = station.prices.find(p => p.type === fuelType);
+        {state.stations.map((station) => {
+          const price = station.prices?.find(p => p.type === fuelType);
           const cat = price ? getPriceCategory(price.price) : 'medium';
           const priceColor = getPriceCategoryColor(cat);
           const outdated = price ? isOutdated(price.updatedAt) : false;

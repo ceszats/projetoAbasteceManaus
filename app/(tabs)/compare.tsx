@@ -16,7 +16,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useTheme } from '@/hooks/theme/use-theme';
 import { useApp } from '@/context/AppContext';
 import {
-  STATIONS,
   FUEL_TYPE_LABELS,
   FUEL_TYPE_ICONS,
   FuelType,
@@ -44,7 +43,7 @@ export default function CompareScreen() {
   const comparatorIds = state.comparatorIds;
 
   const stationsWithDistance = useMemo(() =>
-    STATIONS.map(s => ({
+    state.stations.map(s => ({
       ...s,
       distance: calculateDistance(
         state.userLocation?.latitude ?? MANAUS_CENTER.latitude,
@@ -52,7 +51,7 @@ export default function CompareScreen() {
         s.latitude,
         s.longitude
       ),
-    })), [state.userLocation]);
+    })), [state.stations, state.userLocation]);
 
   const station1 = stationsWithDistance.find(s => s.id === comparatorIds[0]);
   const station2 = stationsWithDistance.find(s => s.id === comparatorIds[1]);

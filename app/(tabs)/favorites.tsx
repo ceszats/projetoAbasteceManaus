@@ -14,13 +14,9 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useTheme } from '@/hooks/theme/use-theme';
 import { useApp } from '@/context/AppContext';
 import {
-  STATIONS,
   Station,
-  FuelType,
   calculateDistance,
   MANAUS_CENTER,
-  getPriceCategory,
-  getPriceCategoryColor,
 } from '@/data/stations';
 import * as Haptics from 'expo-haptics';
 

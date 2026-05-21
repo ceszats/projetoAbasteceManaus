@@ -14,7 +14,6 @@ import { useTheme } from '@/hooks/theme/use-theme';
 import { useApp } from '@/context/AppContext';
 import { useRouter } from 'expo-router';
 import {
-  STATIONS,
   MANAUS_CENTER,
   getPriceCategory,
   getPriceCategoryColor,
@@ -84,7 +83,7 @@ export default function MapScreen() {
       <Map
         mapRef={mapRef}
         initialRegion={MANAUS_CENTER}
-        stations={STATIONS}
+        stations={state.stations}
         fuelType={fuelType}
         onMarkerPress={handleMarkerPress}
         userLocation={state.userLocation}
