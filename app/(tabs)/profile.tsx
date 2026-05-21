@@ -18,7 +18,7 @@ import { GamificationBadge } from '@/components/gamification/GamificationBadge';
 import { useTheme } from '@/hooks/theme/use-theme';
 import { trpc } from '@/lib/trpc';
 import { useApp, PriceAlert } from '@/context/AppContext';
-import { FuelType, FUEL_TYPE_LABELS, FUEL_TYPE_ICONS, stationMatchesSearch } from '@/data/stations';
+import { FuelType, FUEL_TYPE_LABELS, FUEL_TYPE_ICONS, STATIONS, stationMatchesSearch } from '@/data/stations';
 import { useColorScheme } from '@/hooks/theme/use-color-scheme';
 import { useThemeContext } from '@/lib/theme-provider';
 

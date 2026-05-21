@@ -141,6 +141,17 @@ const AppContext = createContext<{
 
 const STORAGE_KEY = '@fuelmap_state';
 
+function parseAmenities(value: string | string[] | null | undefined): string[] {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
@@ -171,6 +182,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (dbStations && dbStations.length > 0) {
       const mappedStations = dbStations.map(dbS => ({
+        ...STATIONS.find((station) => station.id === dbS.id),
         id: dbS.id,
         name: dbS.name,
         brand: dbS.brand,
@@ -178,10 +190,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         neighborhood: dbS.neighborhood,
         latitude: dbS.latitude,
         longitude: dbS.longitude,
-        prices: [], // Loaded per station
-        reviews: [], // Not implemented in DB yet
-        priceHistory: { gasolina: [], etanol: [], diesel: [], gnv: [], aditivada: [] },
-        amenities: JSON.parse(dbS.amenities),
+        prices: dbS.prices.length > 0
+          ? dbS.prices
+          : (STATIONS.find((station) => station.id === dbS.id)?.prices ?? []),
+        reviews: STATIONS.find((station) => station.id === dbS.id)?.reviews ?? [],
+        priceHistory: STATIONS.find((station) => station.id === dbS.id)?.priceHistory ?? { gasolina: [], etanol: [], diesel: [], gnv: [], aditivada: [] },
+        amenities: parseAmenities(dbS.amenities),
         isFavorite: state.favoriteIds.includes(dbS.id),
       }));
       

@@ -9,6 +9,21 @@ let _db: ReturnType<typeof drizzle> | null = null;
 
 function ensureLocalSchema(sqlite: Database.Database) {
   sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS stations (
+      id text PRIMARY KEY NOT NULL,
+      name text NOT NULL,
+      brand text DEFAULT 'Independente' NOT NULL,
+      address text DEFAULT 'Endereco nao cadastrado' NOT NULL,
+      neighborhood text DEFAULT 'Manaus' NOT NULL,
+      latitude real NOT NULL,
+      longitude real NOT NULL,
+      cnpj text,
+      amenities text DEFAULT '[]' NOT NULL,
+      osmId text,
+      createdAt text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      updatedAt text DEFAULT CURRENT_TIMESTAMP NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS users (
       id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
       openId text NOT NULL,
@@ -48,9 +63,11 @@ function ensureLocalSchema(sqlite: Database.Database) {
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  const databaseUrl = process.env.DATABASE_URL || (process.env.NODE_ENV === "production" ? "" : "file:./local.db");
+
+  if (!_db && databaseUrl) {
     try {
-      const sqlitePath = process.env.DATABASE_URL.replace("file:", "");
+      const sqlitePath = databaseUrl.replace("file:", "");
       const sqlite = new Database(sqlitePath);
       ensureLocalSchema(sqlite);
       _db = drizzle(sqlite);
@@ -234,6 +251,13 @@ export async function getStationContributions(stationId: string) {
     .select()
     .from(contributions)
     .where(eq(contributions.stationId, stationId));
+}
+
+export async function getAllContributions(): Promise<Contribution[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(contributions);
 }
 
 /**

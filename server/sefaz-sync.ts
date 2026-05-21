@@ -13,6 +13,7 @@
 import { getDb } from "./db";
 import { contributions, stations } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { Agent } from "undici";
 
 // ---------------------------------------------------------------------------
 // Utilitários
@@ -67,37 +68,132 @@ interface SefazHit {
   nomeProduto: string;
   valorUnitario: number;
   nomeEmpresa: string;
-  cnpjEmpresa: string;
+  cnpjEmpresa?: string;
   enderecoEmpresa: string;
   municipio: string;
   dataEmissao: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+function normalizeText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function stableIdFromHit(hit: SefazHit): string {
+  const source = normalizeText(`${hit.nomeEmpresa} ${hit.enderecoEmpresa}`).toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < source.length; i++) {
+    hash = ((hash << 5) - hash + source.charCodeAt(i)) | 0;
+  }
+  return `sefaz-${Math.abs(hash)}`;
+}
+
+function parseRelativeSefazTime(value: string): string {
+  const text = normalizeText(value);
+  const now = Date.now();
+  let ms = 0;
+
+  const days = text.match(/(\d+)\s+DIA/);
+  const hours = text.match(/(\d+)\s+HORA/);
+  const minutes = text.match(/(\d+)\s+MINUTO/);
+  const seconds = text.match(/(\d+)\s+SEGUNDO/);
+
+  if (days) ms += Number(days[1]) * 24 * 60 * 60 * 1000;
+  if (hours) ms += Number(hours[1]) * 60 * 60 * 1000;
+  if (minutes) ms += Number(minutes[1]) * 60 * 1000;
+  if (seconds) ms += Number(seconds[1]) * 1000;
+
+  return new Date(now - ms).toISOString();
+}
+
+function decodeHtml(value: string): string {
+  return value
+    .replace(/&atilde;/gi, "ã")
+    .replace(/&aacute;/gi, "á")
+    .replace(/&acirc;/gi, "â")
+    .replace(/&eacute;/gi, "é")
+    .replace(/&ecirc;/gi, "ê")
+    .replace(/&iacute;/gi, "í")
+    .replace(/&oacute;/gi, "ó")
+    .replace(/&ocirc;/gi, "ô")
+    .replace(/&otilde;/gi, "õ")
+    .replace(/&uacute;/gi, "ú")
+    .replace(/&ccedil;/gi, "ç")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function stripHtml(value: string): string {
+  return decodeHtml(value.replace(/<[^>]+>/g, " "));
 }
 
 async function matchStation(hit: SefazHit): Promise<string> {
   const db = await getDb();
-  const cnpjLimpo = cleanCnpj(hit.cnpjEmpresa);
+  const cnpjLimpo = cleanCnpj(hit.cnpjEmpresa ?? "");
   const nomeUpper = hit.nomeEmpresa.toUpperCase();
 
   if (db) {
     // 1. Match por CNPJ exato no banco de dados
-    const byId = await db
-      .select({ id: stations.id })
-      .from(stations)
-      .where(eq(stations.cnpj, cnpjLimpo))
-      .limit(1);
+    if (cnpjLimpo) {
+      const byId = await db
+        .select({ id: stations.id })
+        .from(stations)
+        .where(eq(stations.cnpj, cnpjLimpo))
+        .limit(1);
 
-    if (byId.length > 0) return byId[0].id;
+      if (byId.length > 0) return byId[0].id;
+    }
 
-    // 3. Match por similaridade de nome
-    const allStations = await db.select({ id: stations.id, name: stations.name, brand: stations.brand }).from(stations);
+    // 2. Match por similaridade de nome/endereço
+    const hitName = normalizeText(hit.nomeEmpresa);
+    const hitAddress = normalizeText(hit.enderecoEmpresa);
+    const allStations = await db.select().from(stations);
+    let best: { id: string; score: number } | null = null;
     for (const s of allStations) {
-      if (
-        nomeUpper.includes(s.name.toUpperCase()) ||
-        nomeUpper.includes(s.brand.toUpperCase()) ||
-        s.name.toUpperCase().includes(nomeUpper.substring(0, 10))
-      ) {
-        return s.id;
-      }
+      const stationName = normalizeText(s.name);
+      const stationBrand = normalizeText(s.brand);
+      const stationAddress = normalizeText(s.address);
+      const stationNeighborhood = normalizeText(s.neighborhood);
+      let score = 0;
+
+      if (stationName && hitName.includes(stationName)) score += 3;
+      if (stationName && stationName.includes(hitName.slice(0, 12))) score += 2;
+      if (stationBrand && hitName.includes(stationBrand)) score += 1;
+      if (stationAddress && hitAddress.includes(stationAddress.slice(0, 12))) score += 3;
+      if (stationNeighborhood && hitAddress.includes(stationNeighborhood)) score += 1;
+
+      if (!best || score > best.score) best = { id: s.id, score };
+    }
+
+    if (best && best.score >= 3) return best.id;
+
+    if (hit.latitude && hit.longitude) {
+      const fallbackId = stableIdFromHit(hit);
+      await db.insert(stations).values({
+        id: fallbackId,
+        name: hit.nomeEmpresa,
+        brand: "Independente",
+        address: hit.enderecoEmpresa || "Endereco nao cadastrado",
+        neighborhood: "Manaus",
+        latitude: hit.latitude,
+        longitude: hit.longitude,
+        cnpj: cnpjLimpo || null,
+        amenities: JSON.stringify(["SEFAZ"]),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }).onConflictDoNothing();
+      return fallbackId;
     }
   }
 
@@ -105,7 +201,7 @@ async function matchStation(hit: SefazHit): Promise<string> {
   if (NAME_OVERRIDES[nomeUpper]) return NAME_OVERRIDES[nomeUpper];
 
   // 4. Fallback: registra com CNPJ como ID temporário
-  return `cnpj-${cnpjLimpo}`;
+  return cnpjLimpo ? `cnpj-${cnpjLimpo}` : stableIdFromHit(hit);
 }
 
 // ---------------------------------------------------------------------------
@@ -120,6 +216,12 @@ const SEFAZ_HEADERS = {
   "Referer": "https://buscapreco.sefaz.am.gov.br/",
   "User-Agent": "FuelMapManaus/1.0 (app publico de precos; contato@fuelmap.app)",
 };
+
+const sefazDispatcher = new Agent({
+  connect: {
+    rejectUnauthorized: false,
+  },
+});
 
 async function fetchSefaz(query: string): Promise<SefazHit[]> {
   const body = {
@@ -164,8 +266,9 @@ async function fetchSefaz(query: string): Promise<SefazHit[]> {
     method: "POST",
     headers: SEFAZ_HEADERS,
     body: JSON.stringify(body),
+    dispatcher: sefazDispatcher,
     signal: AbortSignal.timeout(15_000), // timeout obrigatório de 15s
-  });
+  } as RequestInit & { dispatcher: Agent });
 
   if (!res.ok) {
     throw new Error(`HTTP ${res.status} ${res.statusText}`);
@@ -174,6 +277,66 @@ async function fetchSefaz(query: string): Promise<SefazHit[]> {
   const json = await res.json();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (json?.hits?.hits ?? []).map((h: any) => h._source as SefazHit);
+}
+
+async function fetchSefazLegacy(query: string): Promise<SefazHit[]> {
+  const params = new URLSearchParams({
+    descricaoProd: query,
+    latitude: "-3.1019",
+    longitude: "-60.0250",
+    tipoConsulta: "48",
+    distancia: "9999",
+    municipio: "Manaus",
+  });
+
+  const res = await fetch("https://buscapreco.sefaz.am.gov.br/item/grupo/p/1", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": SEFAZ_HEADERS["User-Agent"],
+      "Origin": "https://buscapreco.sefaz.am.gov.br",
+      "Referer": "https://buscapreco.sefaz.am.gov.br/home",
+    },
+    body: params.toString(),
+    signal: AbortSignal.timeout(25_000),
+  });
+
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+
+  const html = await res.text();
+  const cardRegex = /<div class="card small p hoverable">([\s\S]*?)<!-- Modal Structure -->/g;
+  const hits: SefazHit[] = [];
+  let card: RegExpExecArray | null;
+
+  while ((card = cardRegex.exec(html))) {
+    const block = card[1];
+    const productMatch = block.match(/card-title[^>]*data-tooltip="([^"]+)"/);
+    const stationMatch = block.match(/<p class="truncate tooltipped padding10"[^>]*data-tooltip="([^"]+)"/);
+    const addressMatch = block.match(/<span\s+class="truncate grey-text[^"]*"[^>]*data-tooltip="([^"]+)"/);
+    const priceMatch = block.match(/R\$\s*([0-9]+,[0-9]{2})/);
+    const timeMatch = block.match(/<p class="tb-valor-10">([^<]+)<\/p>/);
+    const mapMatch = block.match(/refreshMap\(\s*([-0-9.]+)\s*,\s*([-0-9.]+)\s*\)/);
+
+    const nomeProduto = productMatch ? decodeHtml(productMatch[1]) : query;
+    const nomeEmpresa = stationMatch ? decodeHtml(stationMatch[1]) : "";
+    const enderecoEmpresa = addressMatch ? decodeHtml(addressMatch[1]) : "";
+    const valorUnitario = priceMatch ? Number(priceMatch[1].replace(",", ".")) : NaN;
+
+    if (!nomeEmpresa || !Number.isFinite(valorUnitario)) continue;
+
+    hits.push({
+      nomeProduto: stripHtml(nomeProduto),
+      valorUnitario,
+      nomeEmpresa: stripHtml(nomeEmpresa),
+      enderecoEmpresa: stripHtml(enderecoEmpresa),
+      municipio: "MANAUS",
+      dataEmissao: parseRelativeSefazTime(timeMatch?.[1] ?? ""),
+      latitude: mapMatch ? Number(mapMatch[2]) : undefined,
+      longitude: mapMatch ? Number(mapMatch[1]) : undefined,
+    });
+  }
+
+  return hits;
 }
 
 // ---------------------------------------------------------------------------
@@ -190,6 +353,12 @@ export async function syncSefazPrices(): Promise<{
   let skipped = 0;
   const errors: string[] = [];
 
+  if (!db) {
+    const message = "Banco de dados indisponivel. Configure DATABASE_URL ou use o SQLite local de desenvolvimento.";
+    console.error(`[SEFAZ] ${message}`);
+    return { synced, skipped, errors: [message] };
+  }
+
   for (const { query, fuelType } of FUEL_MAP) {
     console.log(`[SEFAZ] Buscando: ${query}`);
 
@@ -200,12 +369,18 @@ export async function syncSefazPrices(): Promise<{
       hits = await fetchSefaz(query);
       console.log(`[SEFAZ] ${hits.length} resultados para ${query}`);
     } catch (err) {
-      const msg = `Erro ao buscar ${query}: ${err instanceof Error ? err.message : String(err)}`;
-      console.error(`[SEFAZ] ${msg}`);
-      errors.push(msg);
+      console.warn(`[SEFAZ] Elasticsearch falhou para ${query}; tentando scraping HTML...`);
+      try {
+        hits = await fetchSefazLegacy(query);
+        console.log(`[SEFAZ] ${hits.length} resultados HTML para ${query}`);
+      } catch (fallbackErr) {
+        const msg = `Erro ao buscar ${query}: ${fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)}`;
+        console.error(`[SEFAZ] ${msg}`);
+        errors.push(msg);
       // Aguarda antes de continuar para não bombardear o servidor em falhas
-      await sleep(3_000);
-      continue;
+        await sleep(3_000);
+        continue;
+      }
     }
 
     for (const hit of hits) {
@@ -226,7 +401,7 @@ export async function syncSefazPrices(): Promise<{
 
       // INSERT separado com try/catch — duplicatas são ignoradas silenciosamente
       try {
-        await db!.insert(contributions).values({
+        await db.insert(contributions).values({
           userId: 0, // contribuição automática da SEFAZ
           stationId,
           fuelType,

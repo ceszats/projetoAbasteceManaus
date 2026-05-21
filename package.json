@@ -31,7 +31,7 @@
     "@trpc/react-query": "11.7.2",
     "@trpc/server": "11.7.2",
     "axios": "^1.13.2",
-    "better-sqlite3": "^12.9.0",
+    "better-sqlite3": "^12.10.0",
     "clsx": "^2.1.1",
     "cookie": "^1.1.1",
     "dotenv": "^16.6.1",
@@ -72,6 +72,7 @@
     "react-native-worklets": "0.5.1",
     "superjson": "^1.13.3",
     "tailwind-merge": "^2.6.0",
+    "undici": "^6.25.0",
     "zod": "^4.2.1"
   },
   "devDependencies": {

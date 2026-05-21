@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/layout/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { FuelTypeFilter } from '@/components/fuel/FuelTypeFilter';
+import { RouteModal } from '@/components/navigation/RouteModal';
 import { useTheme } from '@/hooks/theme/use-theme';
 import { useApp } from '@/context/AppContext';
 import { useRouter } from 'expo-router';
@@ -27,7 +28,7 @@ import {
 } from '@/data/stations';
 import * as Haptics from 'expo-haptics';
 import Map from '@/components/map';
-import { Linking, Platform } from 'react-native';
+import { Platform } from 'react-native';
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
@@ -38,6 +39,7 @@ export default function MapScreen() {
   const hasCenteredOnUser = useRef(false);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [routeStation, setRouteStation] = useState<Station | null>(null);
 
   const fuelType = state.selectedFuelType;
   const filteredStations = React.useMemo(() => {
@@ -222,14 +224,7 @@ export default function MapScreen() {
         };
         const brandColor = brandColors[selectedStation.brand] ?? colors.primary;
 
-        const handleDirections = () => {
-          const url = Platform.OS === 'ios'
-            ? `maps://app?daddr=${selectedStation.latitude},${selectedStation.longitude}`
-            : `geo:${selectedStation.latitude},${selectedStation.longitude}?q=${encodeURIComponent(selectedStation.name)}`;
-          Linking.openURL(url).catch(() =>
-            Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${selectedStation.latitude},${selectedStation.longitude}`)
-          );
-        };
+        const handleDirections = () => setRouteStation(selectedStation);
 
         const handleToggleFav = () => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -368,6 +363,17 @@ export default function MapScreen() {
           </TouchableWithoutFeedback>
         );
       })()}
+
+      {routeStation && (
+        <RouteModal
+          visible={!!routeStation}
+          onClose={() => setRouteStation(null)}
+          stationName={routeStation.name}
+          stationBrand={routeStation.brand}
+          destination={{ latitude: routeStation.latitude, longitude: routeStation.longitude }}
+          userLocation={state.userLocation}
+        />
+      )}
     </View>
   );
 }
