@@ -8,6 +8,7 @@ import { registerSocialOAuthRoutes } from "./socialOAuth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { getAllowedOrigins, rateLimit, securityHeaders } from "./security";
+import { sdk } from "./sdk";
 import { syncSefazPrices } from "../sefaz-sync";
 import * as db from "../db";
 
@@ -125,6 +126,7 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "2mb", extended: true }));
   app.use("/api/auth", rateLimit({ windowMs: 60_000, max: 30 }));
   app.use("/api/oauth", rateLimit({ windowMs: 60_000, max: 20 }));
+  app.use("/api/contributions", rateLimit({ windowMs: 60_000, max: 20 }));
   app.use("/api/trpc", rateLimit({ windowMs: 60_000, max: 120 }));
 
   registerOAuthRoutes(app);
@@ -216,6 +218,7 @@ async function startServer() {
 
   app.post("/api/contributions", async (req, res) => {
     try {
+      const user = await sdk.authenticateRequest(req);
       const stationId = String(req.body?.stationId ?? "").trim();
       const fuelType = String(req.body?.fuelType ?? "");
       const price = Number(req.body?.price);
@@ -232,7 +235,7 @@ async function startServer() {
       }
 
       const id = await db.addContribution({
-        userId: -1,
+        userId: user.id,
         stationId,
         fuelType,
         price: price.toFixed(3).replace(/0+$/, "").replace(/\.$/, ""),
@@ -247,7 +250,11 @@ async function startServer() {
       res.status(201).json({ id, source: "user", createdAt: new Date().toISOString() });
     } catch (err) {
       console.error("[API] /api/contributions failed:", err);
-      res.status(500).json({ error: "Falha ao salvar contribuicao" });
+      const message = err instanceof Error ? err.message : "";
+      const isAuthError = message.includes("Invalid session") || message.includes("User not found");
+      res.status(isAuthError ? 401 : 500).json({
+        error: isAuthError ? "Sessao obrigatoria para contribuir" : "Falha ao salvar contribuicao",
+      });
     }
   });
 

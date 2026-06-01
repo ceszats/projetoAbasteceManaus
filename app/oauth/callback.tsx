@@ -26,6 +26,7 @@ export default function OAuthCallback() {
     error?: string;
     sessionToken?: string;
     user?: string;
+    auth?: string;
   }>();
   const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -59,6 +60,28 @@ export default function OAuthCallback() {
               console.error("[OAuth] Failed to parse user data:", err);
             }
           }
+
+          setStatus("success");
+          setTimeout(() => {
+            router.replace("/(tabs)");
+          }, 1000);
+          return;
+        }
+
+        if (params.auth === "success") {
+          const apiUser = await Api.getMe();
+          if (!apiUser) {
+            throw new Error("Sessao autenticada nao encontrada");
+          }
+
+          await applyAuthUser(dispatch, {
+            id: apiUser.id,
+            openId: apiUser.openId,
+            name: apiUser.name,
+            email: apiUser.email,
+            loginMethod: apiUser.loginMethod,
+            lastSignedIn: new Date(apiUser.lastSignedIn || Date.now()),
+          });
 
           setStatus("success");
           setTimeout(() => {
@@ -192,7 +215,16 @@ export default function OAuthCallback() {
     };
 
     handleCallback();
-  }, [params.code, params.state, params.error, params.sessionToken, params.user, router, dispatch]);
+  }, [
+    params.auth,
+    params.code,
+    params.state,
+    params.error,
+    params.sessionToken,
+    params.user,
+    router,
+    dispatch,
+  ]);
 
   return (
     <SafeAreaView className="flex-1" edges={["top", "bottom", "left", "right"]}>

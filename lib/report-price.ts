@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from '@/constants/oauth';
 import type { FuelType } from '@/data/stations';
+import { apiCall } from '@/lib/_core/api';
 
 export async function reportStationPrice(input: {
   stationId: string;
@@ -9,19 +10,8 @@ export async function reportStationPrice(input: {
   const base = getApiBaseUrl();
   if (!base) throw new Error('URL da API nao configurada');
 
-  const response = await fetch(`${base}/api/contributions`, {
+  return apiCall<{ id: number; source: 'user'; createdAt: string }>('/api/contributions', {
     method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify(input),
   });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data?.error ?? `API ${response.status}`);
-  }
-
-  return data as { id: number; source: 'user'; createdAt: string };
 }

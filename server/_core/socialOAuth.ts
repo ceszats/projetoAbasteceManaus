@@ -2,6 +2,7 @@ import { randomBytes, createHmac, timingSafeEqual } from "crypto";
 import type { Express, Request, Response } from "express";
 import { ONE_YEAR_MS, COOKIE_NAME } from "../../shared/const.js";
 import { getSessionCookieOptions } from "./cookies";
+import { assertAllowedOAuthRedirectUri } from "./oauthRedirect";
 import { sdk } from "./sdk";
 import { upsertUser, getUserByOpenId } from "../db";
 
@@ -127,12 +128,16 @@ async function fetchProfile(provider: Provider, accessToken: string) {
 
 function redirectWithSession(res: Response, redirectUri: string, sessionToken: string, user: unknown) {
   const url = new URL(redirectUri);
-  url.searchParams.set("sessionToken", sessionToken);
-  url.searchParams.set("user", Buffer.from(JSON.stringify(user)).toString("base64"));
+  if (url.protocol === "http:" || url.protocol === "https:") {
+    url.searchParams.set("auth", "success");
+  } else {
+    url.searchParams.set("sessionToken", sessionToken);
+    url.searchParams.set("user", Buffer.from(JSON.stringify(user)).toString("base64"));
+  }
   res.redirect(url.toString());
 }
 
-async function redirectWithDevSession(res: Response, provider: Provider, redirectUri: string) {
+async function redirectWithDevSession(req: Request, res: Response, provider: Provider, redirectUri: string) {
   const profile = {
     openId: `${provider}-mock-id-${provider === "google" ? "123" : "456"}`,
     name: provider === "google" ? "Teste Google" : "Teste Facebook",
@@ -157,6 +162,8 @@ async function redirectWithDevSession(res: Response, provider: Provider, redirec
     lastSignedIn: savedUser?.lastSignedIn ?? new Date().toISOString(),
   };
 
+  const cookieOptions = getSessionCookieOptions(req);
+  res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
   redirectWithSession(res, redirectUri, sessionToken, user);
 }
 
@@ -179,8 +186,14 @@ export function registerSocialOAuthRoutes(app: Express) {
       res.status(400).json({ error: "redirectUri is required" });
       return;
     }
+    try {
+      assertAllowedOAuthRedirectUri(redirectUri);
+    } catch (error) {
+      res.status(400).json({ error: error instanceof Error ? error.message : "Invalid redirectUri" });
+      return;
+    }
     if (!config.clientId || !config.clientSecret) {
-      redirectWithDevSession(res, provider, redirectUri).catch((error) => {
+      redirectWithDevSession(req, res, provider, redirectUri).catch((error) => {
         res.status(500).json({
           error: error instanceof Error ? error.message : "Dev OAuth failed",
         });
@@ -211,6 +224,7 @@ export function registerSocialOAuthRoutes(app: Express) {
       }
 
       const verifiedState = verifyState(state, provider);
+      assertAllowedOAuthRedirectUri(verifiedState.redirectUri);
       const callbackUri = `${getServerBaseUrl(req)}/api/oauth/${provider}/callback`;
       const token = await exchangeToken(provider, code, callbackUri);
       const profile = await fetchProfile(provider, token.access_token);

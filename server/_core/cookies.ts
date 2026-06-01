@@ -8,6 +8,19 @@ function isIpAddress(host: string) {
   return host.includes(":");
 }
 
+function getRequestHostname(req: Request) {
+  const rawHost =
+    req.hostname ||
+    (typeof req.get === "function" ? req.get("host") : undefined) ||
+    "localhost";
+
+  if (rawHost.startsWith("[")) {
+    return rawHost.slice(1, rawHost.indexOf("]"));
+  }
+
+  return rawHost.split(":")[0] || "localhost";
+}
+
 function isSecureRequest(req: Request) {
   if (req.protocol === "https") return true;
 
@@ -47,7 +60,7 @@ function getParentDomain(hostname: string): string | undefined {
 export function getSessionCookieOptions(
   req: Request,
 ): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
-  const hostname = req.hostname;
+  const hostname = getRequestHostname(req);
   const domain = getParentDomain(hostname);
 
   return {

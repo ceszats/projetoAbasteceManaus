@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { isAllowedOAuthRedirectUri } from '../server/_core/oauthRedirect';
 
 describe('OAuth Flow', () => {
   it('should validate OAuth provider enum', () => {
@@ -56,5 +57,16 @@ describe('OAuth Flow', () => {
     expect(['gasolina', 'aditivada', 'etanol', 'diesel', 'gnv']).toContain(contribution.fuelType);
     expect(parseFloat(contribution.price)).toBeGreaterThan(0);
     expect(contribution.createdAt).toBeInstanceOf(Date);
+  });
+
+  it('should only allow OAuth redirects back to the app callback', () => {
+    process.env.ALLOWED_ORIGINS = 'https://app.example.com';
+
+    expect(isAllowedOAuthRedirectUri('http://localhost:8081/oauth/callback')).toBe(true);
+    expect(isAllowedOAuthRedirectUri('https://app.example.com/oauth/callback')).toBe(true);
+    expect(isAllowedOAuthRedirectUri('manus20260327112602://oauth/callback')).toBe(true);
+    expect(isAllowedOAuthRedirectUri('https://evil.example.com/oauth/callback')).toBe(false);
+    expect(isAllowedOAuthRedirectUri('https://app.example.com/not-callback')).toBe(false);
+    expect(isAllowedOAuthRedirectUri('javascript:alert(1)')).toBe(false);
   });
 });
