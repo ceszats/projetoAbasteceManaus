@@ -1,7 +1,7 @@
 import { Tabs, Redirect } from "expo-router";
 import { useApp } from "@/context/AppContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Platform, View } from "react-native";
+import { ActivityIndicator, Platform, View } from "react-native";
 
 import { HapticTab } from "@/components/navigation/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -10,11 +10,20 @@ import { useColors } from "@/hooks/theme/use-colors";
 export default function TabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { state } = useApp();
+  const { state, authReady } = useApp();
+
+  if (!authReady) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   if (!state.user) {
     return <Redirect href="/login" />;
   }
+
   const bottomPadding = Platform.OS === "web" ? 12 : Math.max(insets.bottom, 8);
   const tabBarHeight = 56 + bottomPadding;
 
@@ -43,35 +52,35 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Mapa",
+          title: 'Mapa',
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="map.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="list"
         options={{
-          title: "Postos",
+          title: 'Lista',
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="list.bullet" color={color} />,
         }}
       />
       <Tabs.Screen
         name="compare"
         options={{
-          title: "Comparar",
+          title: 'Comparar',
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="arrow.left.arrow.right" color={color} />,
         }}
       />
       <Tabs.Screen
         name="favorites"
         options={{
-          title: "Favoritos",
+          title: 'Favoritos',
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="heart.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Perfil",
+          title: 'Perfil',
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.fill" color={color} />,
         }}
       />

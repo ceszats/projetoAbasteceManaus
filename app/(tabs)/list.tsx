@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/layout/screen-container';
@@ -23,12 +24,18 @@ import {
   getPriceCategory,
   getPriceCategoryColor,
   getPriceConfidence,
-  FuelType,
+  FUEL_TYPE_LABELS,
   Station,
   stationMatchesSearch,
+  filterStationsForList,
 } from '@/data/stations';
 import * as Haptics from 'expo-haptics';
-import { Platform } from 'react-native';
+import {
+  buildFuelRecommendations,
+  estimateEconomyAgainstNearest,
+  formatCurrency,
+  getFuelPrice,
+} from '@/lib/fuel-recommendations';
 
 type SortOption = 'price' | 'distance' | 'rating';
 
@@ -46,16 +53,32 @@ export default function ListScreen() {
   const { colors, tokens } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { state, dispatch } = useApp();
+  const { state, dispatch, sefazStatus } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [showAllStations, setShowAllStations] = useState(true);
+  const [useCustomFilters, setUseCustomFilters] = useState(false);
   const [showConfirmedOnly, setShowConfirmedOnly] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
 
   const fuelType = state.selectedFuelType;
   const sortBy = state.sortBy;
   const maxDistance = state.maxDistance;
+  const mapViewMode = state.mapViewMode;
+  const mapRadiusKm = state.mapRadiusKm;
+  const mapLiveOnly = state.mapLiveOnly;
+  const useMapFilters = !useCustomFilters;
+  const locationReferenceLabel = state.userLocation ? 'GPS ativo' : 'Centro de Manaus';
+
+  const sefazStatusLabel = useMemo(() => {
+    if (!sefazStatus || sefazStatus.count === 0) return 'SEFAZ: sem preços recentes';
+
+    const lastSync = sefazStatus.lastSync ? new Date(sefazStatus.lastSync) : null;
+    const lastSyncLabel = lastSync && !Number.isNaN(lastSync.getTime())
+      ? lastSync.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      : null;
+
+    return `SEFAZ: ${sefazStatus.count} preços recentes${lastSyncLabel ? ` · atual. ${lastSyncLabel}` : ''}`;
+  }, [sefazStatus]);
 
   // Referência de localização (centro de Manaus como padrão)
   const userLat = state.userLocation?.latitude ?? MANAUS_CENTER.latitude;
@@ -122,24 +145,38 @@ export default function ListScreen() {
   }, [fuelType, selectedBrand, selectedNeighborhood, stationsWithDistance]);
 
   const filtered = useMemo(() => {
-    let list = stationsWithDistance;
+    let list: (Station & { distance?: number })[];
     const hasSearch = searchQuery.trim().length > 0;
 
-    // Filtro de busca
-    if (hasSearch) {
-      list = list.filter(s => stationMatchesSearch(s, searchQuery));
-    }
+    if (useMapFilters) {
+      list = filterStationsForList(
+        state.stations,
+        fuelType,
+        { latitude: userLat, longitude: userLon },
+        {
+          viewMode: mapViewMode,
+          radiusKm: mapRadiusKm,
+          liveOnly: mapLiveOnly,
+          searchQuery: hasSearch ? searchQuery : undefined,
+          selectedBrand,
+        },
+      ).map((station) => ({
+        ...station,
+        isFavorite: state.favoriteIds.includes(station.id),
+      }));
+    } else {
+      list = stationsWithDistance;
 
-    if (selectedBrand) {
-      list = list.filter(s => s.brand === selectedBrand);
-    }
+      if (hasSearch) {
+        list = list.filter((s) => stationMatchesSearch(s, searchQuery));
+      }
 
-    if (!showAllStations && !hasSearch) {
-      // Filtro de distância
-      list = list.filter(s => (s.distance ?? 999) <= maxDistance);
+      if (selectedBrand) {
+        list = list.filter((s) => s.brand === selectedBrand);
+      }
 
-      // Filtro: apenas postos que têm o combustível selecionado
-      list = list.filter(s => s.prices.some(p => p.type === fuelType));
+      list = list.filter((s) => (s.distance ?? 999) <= maxDistance);
+      list = list.filter((s) => s.prices.some((p) => p.type === fuelType));
 
       if (showConfirmedOnly) {
         list = list.filter((s) => {
@@ -168,7 +205,23 @@ export default function ListScreen() {
     });
 
     return list;
-  }, [stationsWithDistance, searchQuery, selectedBrand, maxDistance, fuelType, sortBy, showAllStations, showConfirmedOnly]);
+  }, [
+    stationsWithDistance,
+    state.stations,
+    state.favoriteIds,
+    searchQuery,
+    selectedBrand,
+    maxDistance,
+    fuelType,
+    sortBy,
+    showConfirmedOnly,
+    useMapFilters,
+    mapViewMode,
+    mapRadiusKm,
+    mapLiveOnly,
+    userLat,
+    userLon,
+  ]);
 
   const cheapestStations = useMemo(() => {
     return filtered
@@ -180,6 +233,13 @@ export default function ListScreen() {
       })
       .slice(0, 5);
   }, [filtered, fuelType]);
+
+  const recommendations = useMemo(
+    () => buildFuelRecommendations(filtered, fuelType),
+    [filtered, fuelType],
+  );
+  const bestValuePrice = recommendations.bestValue ? getFuelPrice(recommendations.bestValue, fuelType) : null;
+  const economy = estimateEconomyAgainstNearest(recommendations.bestValue, recommendations.nearest, fuelType);
 
   const handleSortChange = useCallback((sort: SortOption) => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -211,6 +271,85 @@ export default function ListScreen() {
     <View>
       {/* Filtro de combustível */}
       <FuelTypeFilter selected={fuelType} onSelect={(t) => dispatch({ type: 'SET_FUEL_TYPE', fuelType: t })} />
+
+      <View style={[styles.summaryPanel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={[styles.summaryAccent, { backgroundColor: colors.secondary }]} />
+        <View style={styles.summaryContent}>
+          <Text style={[styles.summaryEyebrow, { color: colors.secondary }]}>
+            {FUEL_TYPE_LABELS[fuelType]} em Manaus
+          </Text>
+          <Text style={[styles.summaryHeadline, { color: colors.foreground }]}>
+            {bestValuePrice ? `Melhor escolha: ${formatCurrency(bestValuePrice)}` : 'Sem preco para este filtro'}
+          </Text>
+          <Text style={[styles.summaryCaption, { color: colors.muted }]} numberOfLines={1}>
+            {recommendations.bestValue ? `${recommendations.bestValue.name} - ${recommendations.bestValue.neighborhood}` : 'Ajuste o raio ou a busca para encontrar postos.'}
+          </Text>
+        </View>
+        {recommendations.bestValue ? (
+          <Pressable
+            onPress={() => router.push(`/station/${recommendations.bestValue!.id}` as any)}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir posto com melhor custo-beneficio"
+            style={({ pressed }) => [
+              styles.summaryAction,
+              { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <IconSymbol name="chevron.right" size={18} color="#fff" />
+          </Pressable>
+        ) : null}
+      </View>
+
+      {recommendations.bestValue ? (
+        <View style={styles.recommendationCards}>
+          <Pressable
+            onPress={() => recommendations.cheapest && router.push(`/station/${recommendations.cheapest.id}` as any)}
+            style={[styles.recommendationCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
+            <Text style={[styles.recommendationLabel, { color: colors.primary }]}>Mais barato</Text>
+            <Text style={[styles.recommendationValue, { color: colors.foreground }]} numberOfLines={1}>
+              {recommendations.cheapest ? formatCurrency(getFuelPrice(recommendations.cheapest, fuelType) ?? 0) : '-'}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => recommendations.nearest && router.push(`/station/${recommendations.nearest.id}` as any)}
+            style={[styles.recommendationCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
+            <Text style={[styles.recommendationLabel, { color: colors.secondary }]}>Mais perto</Text>
+            <Text style={[styles.recommendationValue, { color: colors.foreground }]} numberOfLines={1}>
+              {recommendations.nearest?.distance?.toFixed(1) ?? '-'} km
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push(`/station/${recommendations.bestValue!.id}` as any)}
+            style={[styles.recommendationCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
+            <Text style={[styles.recommendationLabel, { color: colors.success }]}>Custo-beneficio</Text>
+            <Text style={[styles.recommendationValue, { color: colors.foreground }]} numberOfLines={1}>
+              {economy && economy.netSavings > 0 ? `+${formatCurrency(economy.netSavings)}` : 'Melhor rota'}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {useMapFilters ? (
+        <View style={[styles.mapSyncBanner, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '40' }]}>
+          <Text style={[styles.mapSyncText, { color: colors.primary }]}>
+            Filtros do mapa: {mapViewMode === 'all' ? 'Todos em Manaus' : `${mapRadiusKm} km`}
+            {mapLiveOnly ? ' · só SEFAZ' : ''}
+          </Text>
+          <Pressable onPress={() => setUseCustomFilters(true)} hitSlop={8}>
+            <Text style={[styles.mapSyncLink, { color: colors.primary }]}>Personalizar</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      <View style={styles.statusRow}>
+        <Text style={[styles.statusText, { color: colors.muted }]}>{locationReferenceLabel}</Text>
+        <Text style={[styles.statusText, { color: sefazStatus?.count ? colors.success : colors.warning }]}>
+          {sefazStatusLabel}
+        </Text>
+      </View>
 
       {/* Barra de busca + filtros */}
       <View style={styles.searchRow}>
@@ -450,7 +589,11 @@ export default function ListScreen() {
           {filtered.length} posto{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
         </Text>
         <Text style={[styles.countText, { color: colors.muted }]}>
-          {showAllStations ? 'Raio: todos os postos' : `Raio: ${maxDistance}km`}
+          {useMapFilters
+            ? mapViewMode === 'all'
+              ? 'Manaus (mapa)'
+              : `${mapRadiusKm} km (mapa)`
+            : `Raio: ${maxDistance} km`}
         </Text>
       </View>
     </View>
@@ -507,19 +650,19 @@ export default function ListScreen() {
 
             <Text style={[styles.sheetSectionTitle, { color: colors.muted }]}>RAIO DE BUSCA</Text>
             <Pressable
-              onPress={() => setShowAllStations((prev) => !prev)}
+              onPress={() => setUseCustomFilters((prev) => !prev)}
               style={({ pressed }) => [
                 styles.sortOption,
                 {
-                  backgroundColor: showAllStations ? colors.primary + '15' : 'transparent',
+                  backgroundColor: useCustomFilters ? colors.primary + '15' : 'transparent',
                   opacity: pressed ? 0.8 : 1,
                 },
               ]}
             >
-              <Text style={[styles.sortOptionText, { color: showAllStations ? colors.primary : colors.foreground }]}>
-                Mostrar todos os postos (ignorar preço e distância)
+              <Text style={[styles.sortOptionText, { color: useCustomFilters ? colors.primary : colors.foreground }]}>
+                Usar raio personalizado da lista
               </Text>
-              {showAllStations && (
+              {useCustomFilters && (
                 <IconSymbol name="checkmark" size={16} color={colors.primary} />
               )}
             </Pressable>
@@ -531,13 +674,13 @@ export default function ListScreen() {
                   style={({ pressed }) => [
                     styles.distanceChip,
                     {
-                      backgroundColor: !showAllStations && maxDistance === dist ? colors.primary : colors.surface,
-                      borderColor: !showAllStations && maxDistance === dist ? colors.primary : colors.border,
+                      backgroundColor: useCustomFilters && maxDistance === dist ? colors.primary : colors.surface,
+                      borderColor: useCustomFilters && maxDistance === dist ? colors.primary : colors.border,
                       opacity: pressed ? 0.8 : 1,
                     },
                   ]}
                 >
-                  <Text style={[styles.distanceText, { color: !showAllStations && maxDistance === dist ? '#fff' : colors.foreground }]}>
+                  <Text style={[styles.distanceText, { color: useCustomFilters && maxDistance === dist ? '#fff' : colors.foreground }]}>
                     {dist}km
                   </Text>
                 </Pressable>
@@ -602,6 +745,108 @@ export default function ListScreen() {
 }
 
 const styles = StyleSheet.create({
+  summaryPanel: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  summaryAccent: {
+    width: 5,
+    alignSelf: 'stretch',
+  },
+  summaryContent: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    gap: 2,
+  },
+  summaryEyebrow: {
+    fontSize: 11,
+    fontWeight: '900',
+    lineHeight: 15,
+    textTransform: 'uppercase',
+  },
+  summaryHeadline: {
+    fontSize: 17,
+    fontWeight: '900',
+    lineHeight: 22,
+  },
+  summaryCaption: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  summaryAction: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  recommendationCards: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+  },
+  recommendationCard: {
+    flex: 1,
+    minHeight: 66,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 9,
+    justifyContent: 'space-between',
+  },
+  recommendationLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    lineHeight: 14,
+    textTransform: 'uppercase',
+  },
+  recommendationValue: {
+    fontSize: 14,
+    fontWeight: '900',
+    lineHeight: 18,
+  },
+  mapSyncBanner: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  mapSyncText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  mapSyncLink: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  statusText: {
+    fontSize: 11,
+    lineHeight: 15,
+    flexShrink: 1,
+  },
   header: {
     paddingHorizontal: 20,
     paddingTop: 16,

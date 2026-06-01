@@ -1,71 +1,64 @@
-# 🗺️ FuelMap Manaus
+# Abastece Manaus
 
-Para entender onde cada parte do codigo fica, veja [docs/project-structure.md](docs/project-structure.md).
+App para comparar preços de combustível em postos de Manaus (AM), com mapa, lista, favoritos e preços da SEFAZ.
 
-Bem-vindo ao repositório do FuelMap Manaus. Este projeto utiliza o ecossistema robusto do **Expo** com backend incluso sendo executado concorrentemente.
+## Pré-requisitos
 
-Para que tudo funcione de modo universal e fluido, siga este guia definitivo ao baixar o código em qualquer PC.
+1. **Node.js 22 (LTS)** — [nodejs.org](https://nodejs.org) ou `nvm install 22`
+2. **pnpm** — `corepack enable`
 
----
-
-## 🛠️ 1. Pré-Requisitos no Computador
-
-Para iniciar o projeto corretamente, o sistema precisa atender às versões exatas em que o projeto ganha estabilidade.
-
-1. **Instalar Node.js v22 (LTS):** 
-   - Baixe nativamente o `v22.x` pelo [site oficial](https://nodejs.org) ou instale com o [NVM (Node Version Manager)](https://github.com/nvm-sh/nvm): `nvm install 22` e `nvm use 22`.
-   - **Nota Importante:** Versões antigas (como v18) não são mais suportadas e exibirão erros fatais de módulo (ESM) ao iniciar o Expo.
-2. **Gerenciador de Pacotes PNPM:**
-   - Este projeto usa a estabilidade da árvore de dependências do pnpm.
-   - Ative via Corepack (nativo no Node.js):
-   ```bash
-   corepack enable
-   ```
-
----
-
-## 🚀 2. Como Instalar
-
-Abra o terminal dentro da pasta do projeto recém-clonado e obedeça a este simples passo:
-
-1. Renomeie (ou copie) o arquivo `.env.example` para `.env` e preencha as chaves lá dentro, caso não possuam os defaults configurados. 
-2. Construa a estrutura de pacotes:
+## Instalação
 
 ```bash
+cp .env.example .env
+# Celular físico: edite EXPO_PUBLIC_API_BASE_URL com o IPv4 do PC (ipconfig) e a porta do servidor
 pnpm install
+pnpm run setup:local
 ```
 
----
+`setup:local` popula postos (OpenStreetMap) e sincroniza preços SEFAZ no `local.db`.
 
-## 📱🖥️ 3. Como Rodar no Dia-A-Dia
-
-Sempre que for mexer no código, você só precisa digitar de forma simples e direta no terminal:
+## Rodar no dia a dia
 
 ```bash
 pnpm run dev
 ```
-*(Este comando levanta de forma simultânea o Servidor Backend (API) e o Expo Metro Bundler para a Interface do Aplicativo).*
 
-### 👀 Pré-Visualizando as Telas (Como Testar)
+Sobe API Express (`:3000` ou próxima porta livre) + Expo Metro.
 
-Ao constar no terminal que o código subiu sem erros, você tem dois caminhos:
+### Testar no celular
 
-#### A. Testar Diretamente pelo Celular (Físico)
-1. Instale o aplicativo **Expo Go** disponível de graça na [Google Play (Android)](https://play.google.com/store/apps/details?id=host.exp.exponent) ou [App Store (iOS)](https://apps.apple.com/app/expo-go/id982107779).
-2. Execute pnpm run expo:start
-3. Abra seu app de "Câmera" ou o próprio "Expo Go", e aponte para o **QR Code gigante** que o próprio terminal do seu computador (Powershell/CMD) desenhou.
-4. Se estiverem na mesma rede de Wi-Fi, a mágica acontece.
+1. Instale **Expo Go**
+2. PC e celular na mesma rede Wi-Fi
+3. Escaneie o QR Code do terminal
+4. Confirme `EXPO_PUBLIC_API_BASE_URL` no `.env` (ex.: `http://192.168.0.10:3000`)
 
-#### B. Testar Diretamente pelo Computador (Web)
-1. Sem precisar sair do mesmo terminal, basta apertar a tecla **`w`**.
-2. O Expo gerará dinamicamente as páginas renderizadas pra formato de site em seu navegador padrão (`http://localhost:8081`).
+### Emulador Android
 
-#### Dicas Extras do Terminal Expo
-Pressionando a respectiva tecla no seu terminal quando rodar pnpm run dev, reações extras acontecem:
-- `i` - Procura e inicializa automático pelo Emulador do iOS (precisa XCode de Mac/VM).
-- `a` - Procura e inicializa automático no Emulador Android via Android Studio.
-- `r` - Força os aplicativos que estiverem ativos fazendo uso da porta a recarregarem.
-- `j` - Abre as ferramentas de Debug (Inspecionar estilos e network).
+`EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:3000`
 
----
+## Estrutura do projeto
 
+| Pasta | Conteúdo |
+|-------|----------|
+| `app/` | Telas Expo Router (mapa, lista, perfil, login) |
+| `server/` | API Express, tRPC, sync SEFAZ |
+| `data/` | Domínio, filtros, mock de postos |
+| `components/` | UI (mapa, combustível, onboarding) |
+| `context/` | Estado global (postos, auth, filtros do mapa) |
+| `drizzle/` | Schema SQLite |
+
+## Scripts úteis
+
+| Comando | Descrição |
+|---------|-----------|
+| `pnpm run dev` | API + Expo |
+| `pnpm run setup:local` | Seed OSM + sync SEFAZ |
+| `pnpm run db:sync:sefaz` | Atualizar preços SEFAZ |
+| `pnpm run check` | TypeScript |
+| `pnpm test` | Testes Vitest |
+
+## Login
+
+- **Demonstração** — entra sem servidor OAuth
+- **Google/Facebook** — requer variáveis OAuth no `.env` e callback configurado

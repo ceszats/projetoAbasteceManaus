@@ -1,10 +1,18 @@
+﻿import { RAW_STATIONS } from './stations-mock-data';
+
 export type FuelType = 'gasolina' | 'aditivada' | 'etanol' | 'diesel' | 'gnv';
+export type PriceSource = 'sefaz' | 'user' | 'reference' | 'catalog';
 
 export interface FuelPrice {
   type: FuelType;
   price: number;
   updatedAt: Date;
   confirmations: number;
+  /** Preço vindo do banco / SEFAZ */
+  isLive?: boolean;
+  /** Preço estimado de referência quando não há SEFAZ/catálogo para o posto. */
+  isReference?: boolean;
+  source?: PriceSource;
 }
 
 export type PriceConfidence = 'confirmed' | 'recent' | 'outdated';
@@ -108,7 +116,7 @@ const ADDRESS_NEIGHBORHOODS: Array<{ match: string; neighborhood: string }> = [
   { match: 'avenida jacira reis', neighborhood: 'Dom Pedro' },
 ];
 
-function inferStationNeighborhood(station: Station): string {
+export function getStationNeighborhood(station: Station): string {
   const normalizedAddress = normalizeSearchText(station.address);
   const addressMatch = ADDRESS_NEIGHBORHOODS.find(({ match }) =>
     normalizedAddress.includes(match),
@@ -138,9 +146,36 @@ export function stationMatchesSearch(station: Station, query: string): boolean {
   const q = normalizeSearchText(query);
   if (!q) return true;
 
-  return [station.name, station.brand, station.address, station.neighborhood]
+  const neighborhood = getStationNeighborhood(station);
+  const haystack = [station.name, station.brand, station.address, station.neighborhood, neighborhood]
     .map(normalizeSearchText)
-    .some((value) => value.includes(q));
+    .join(' ');
+
+  const tokens = q.split(' ').filter(Boolean);
+  if (tokens.length <= 1) {
+    return haystack.includes(q);
+  }
+  return tokens.every((token) => haystack.includes(token));
+}
+
+/** Preços do banco (SEFAZ) substituem mock por tipo de combustível. */
+export function mergeStationPrices(livePrices: FuelPrice[], fallbackPrices: FuelPrice[] = []): FuelPrice[] {
+  const byType = new Map<FuelType, FuelPrice>();
+  for (const price of fallbackPrices) {
+    byType.set(price.type, {
+      ...price,
+      updatedAt: price.updatedAt instanceof Date ? price.updatedAt : new Date(price.updatedAt),
+    });
+  }
+  for (const price of livePrices) {
+    byType.set(price.type, {
+      ...price,
+      isLive: price.isLive ?? price.source === 'sefaz',
+      source: price.source ?? (price.isLive ? 'sefaz' : 'user'),
+      updatedAt: price.updatedAt instanceof Date ? price.updatedAt : new Date(price.updatedAt),
+    });
+  }
+  return Array.from(byType.values());
 }
 
 function getMockPriceUpdatedAt(stationIndex: number, priceIndex: number) {
@@ -155,2088 +190,9 @@ function getMockConfirmations(stationIndex: number, priceIndex: number, current:
   return Math.max(1, current);
 }
 
-const RAW_STATIONS: Station[] = [
-  {
-    "id": "osm-1366693707",
-    "name": "Posto Atem",
-    "brand": "Atem",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0655937,
-    "longitude": -60.0020993,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.34,
-        updatedAt: new Date("2026-04-09T08:29:09.145Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "aditivada",
-        "price": 6.64,
-        updatedAt: new Date("2026-04-09T08:29:09.145Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "etanol",
-        "price": 4.54,
-        updatedAt: new Date("2026-04-09T04:29:09.145Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-1376594634",
-    "name": "Posto BR",
-    "brand": "BR",
-    "address": "Avenida Tancredo Neves",
-    "neighborhood": "Manaus",
-    "latitude": -3.07006,
-    "longitude": -60.00643,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.15,
-        updatedAt: new Date("2026-04-09T09:28:35.773Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "aditivada",
-        "price": 6.45,
-        updatedAt: new Date("2026-04-09T09:28:35.773Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "etanol",
-        "price": 4.35,
-        updatedAt: new Date("2026-04-09T13:28:35.773Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "diesel",
-        "price": 5.95,
-        updatedAt: new Date("2026-04-09T09:28:35.773Z"),
-        "confirmations": 2
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-1379013679",
-    "name": "Posto Atem",
-    "brand": "Atem",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0815704,
-    "longitude": -60.0063747,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.34,
-        updatedAt: new Date("2026-04-09T15:17:10.153Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "aditivada",
-        "price": 6.64,
-        updatedAt: new Date("2026-04-09T15:17:10.153Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "etanol",
-        "price": 4.54,
-        updatedAt: new Date("2026-04-09T13:17:10.153Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-1390304416",
-    "name": "Ipiranga",
-    "brand": "Ipiranga",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.055823,
-    "longitude": -59.9949201,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.44,
-        updatedAt: new Date("2026-04-09T12:22:43.621Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "aditivada",
-        "price": 6.74,
-        updatedAt: new Date("2026-04-09T12:22:43.621Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "etanol",
-        "price": 4.64,
-        updatedAt: new Date("2026-04-09T08:22:43.621Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "diesel",
-        "price": 6.24,
-        updatedAt: new Date("2026-04-09T12:22:43.621Z"),
-        "confirmations": 2
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-1806192377",
-    "name": "Posto Equador",
-    "brand": "Equador",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0498827,
-    "longitude": -59.9925026,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.12,
-        updatedAt: new Date("2026-04-09T13:29:57.025Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "aditivada",
-        "price": 6.42,
-        updatedAt: new Date("2026-04-09T13:29:57.025Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "etanol",
-        "price": 4.32,
-        updatedAt: new Date("2026-04-09T13:29:57.025Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "diesel",
-        "price": 5.92,
-        updatedAt: new Date("2026-04-09T13:29:57.025Z"),
-        "confirmations": 2
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-1810280244",
-    "name": "Posto Atem",
-    "brand": "Atem",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0722783,
-    "longitude": -60.0442361,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.2,
-        updatedAt: new Date("2026-04-09T12:37:13.813Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "aditivada",
-        "price": 6.5,
-        updatedAt: new Date("2026-04-09T12:37:13.813Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "etanol",
-        "price": 4.4,
-        updatedAt: new Date("2026-04-09T08:37:13.813Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-1810280246",
-    "name": "Posto Shell",
-    "brand": "Shell",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0714855,
-    "longitude": -60.0485276,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.2,
-        updatedAt: new Date("2026-04-09T12:37:13.741Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "aditivada",
-        "price": 6.5,
-        updatedAt: new Date("2026-04-09T12:37:13.741Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "etanol",
-        "price": 4.4,
-        updatedAt: new Date("2026-04-09T08:37:13.741Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-1810286169",
-    "name": "Posto Ipiranga",
-    "brand": "Ipiranga",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0690292,
-    "longitude": -60.0332398,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.26,
-        updatedAt: new Date("2026-04-09T12:33:40.513Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "aditivada",
-        "price": 6.56,
-        updatedAt: new Date("2026-04-09T12:33:40.513Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "etanol",
-        "price": 4.46,
-        updatedAt: new Date("2026-04-09T08:33:40.513Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-1810296562",
-    "name": "Posto Shell",
-    "brand": "Shell",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0890836,
-    "longitude": -59.9952688,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.37,
-        updatedAt: new Date("2026-04-09T12:27:26.365Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "aditivada",
-        "price": 6.67,
-        updatedAt: new Date("2026-04-09T12:27:26.365Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "etanol",
-        "price": 4.57,
-        updatedAt: new Date("2026-04-09T08:27:26.365Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-1810299087",
-    "name": "Posto 10",
-    "brand": "Independente",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.1031593,
-    "longitude": -59.9978875,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.39,
-        updatedAt: new Date("2026-04-09T12:25:55.465Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "aditivada",
-        "price": 6.69,
-        updatedAt: new Date("2026-04-09T12:25:55.465Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "etanol",
-        "price": 4.59,
-        updatedAt: new Date("2026-04-09T08:25:55.465Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-1810488459",
-    "name": "Posto Atem",
-    "brand": "Atem",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0486398,
-    "longitude": -60.0755513,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.88,
-        updatedAt: new Date("2026-04-09T10:32:18.073Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "aditivada",
-        "price": 6.18,
-        updatedAt: new Date("2026-04-09T10:32:18.073Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "etanol",
-        "price": 4.08,
-        updatedAt: new Date("2026-04-09T06:32:18.073Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-1810638887",
-    "name": "Posto Equador",
-    "brand": "Equador",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0930202,
-    "longitude": -60.0213975,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.59,
-        updatedAt: new Date("2026-04-09T09:02:02.665Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "aditivada",
-        "price": 6.89,
-        updatedAt: new Date("2026-04-09T09:02:02.665Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "etanol",
-        "price": 4.79,
-        updatedAt: new Date("2026-04-09T05:02:02.665Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-2337252321",
-    "name": "Posto atem",
-    "brand": "Atem",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.1231853,
-    "longitude": -60.0223457,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.32,
-        updatedAt: new Date("2026-04-09T12:53:59.041Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "aditivada",
-        "price": 6.62,
-        updatedAt: new Date("2026-04-09T12:53:59.041Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "etanol",
-        "price": 4.52,
-        updatedAt: new Date("2026-04-09T06:53:59.041Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-2386513122",
-    "name": "Posto Shell",
-    "brand": "Shell",
-    "address": "Avenida Cosme Ferreira",
-    "neighborhood": "Manaus",
-    "latitude": -3.075702,
-    "longitude": -59.9527851,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.13,
-        updatedAt: new Date("2026-04-09T10:17:30.205Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "aditivada",
-        "price": 6.43,
-        updatedAt: new Date("2026-04-09T10:17:30.205Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "etanol",
-        "price": 4.33,
-        updatedAt: new Date("2026-04-09T06:17:30.205Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "diesel",
-        "price": 5.93,
-        updatedAt: new Date("2026-04-09T10:17:30.205Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-2392943010",
-    "name": "Posto Atem",
-    "brand": "Atem",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.1386897,
-    "longitude": -60.0190216,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.43,
-        updatedAt: new Date("2026-04-09T05:59:34.237Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "aditivada",
-        "price": 6.73,
-        updatedAt: new Date("2026-04-09T05:59:34.237Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "etanol",
-        "price": 4.63,
-        updatedAt: new Date("2026-04-09T13:59:34.237Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "diesel",
-        "price": 6.23,
-        updatedAt: new Date("2026-04-09T05:59:34.237Z"),
-        "confirmations": 2
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-2394017239",
-    "name": "BR",
-    "brand": "BR",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.1285472,
-    "longitude": -60.0046554,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.97,
-        updatedAt: new Date("2026-04-09T15:15:01.993Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "aditivada",
-        "price": 6.27,
-        updatedAt: new Date("2026-04-09T15:15:01.993Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "etanol",
-        "price": 4.17,
-        updatedAt: new Date("2026-04-09T15:15:01.993Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-2801456078",
-    "name": "Posto Atem",
-    "brand": "Petrobras",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -2.9654749,
-    "longitude": -60.021102,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.96,
-        updatedAt: new Date("2026-04-09T10:51:43.789Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "aditivada",
-        "price": 6.26,
-        updatedAt: new Date("2026-04-09T10:51:43.789Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "etanol",
-        "price": 4.16,
-        updatedAt: new Date("2026-04-09T08:51:43.789Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-2935830510",
-    "name": "Posto BR",
-    "brand": "BR",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.1039039,
-    "longitude": -60.0568189,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.51,
-        updatedAt: new Date("2026-04-09T07:07:04.237Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "aditivada",
-        "price": 6.81,
-        updatedAt: new Date("2026-04-09T07:07:04.237Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "etanol",
-        "price": 4.71,
-        updatedAt: new Date("2026-04-09T09:07:04.237Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-2940885213",
-    "name": "Posto Caburé Equador",
-    "brand": "Independente",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0562702,
-    "longitude": -59.9568547,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.85,
-        updatedAt: new Date("2026-04-09T06:34:14.929Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "aditivada",
-        "price": 6.15,
-        updatedAt: new Date("2026-04-09T06:34:14.929Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "etanol",
-        "price": 4.05,
-        updatedAt: new Date("2026-04-09T06:34:14.929Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-2944307007",
-    "name": "Atem",
-    "brand": "Atem",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.074524,
-    "longitude": -59.9497532,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.47,
-        updatedAt: new Date("2026-04-09T12:21:10.345Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "aditivada",
-        "price": 6.77,
-        updatedAt: new Date("2026-04-09T12:21:10.345Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "etanol",
-        "price": 4.67,
-        updatedAt: new Date("2026-04-09T08:21:10.345Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "diesel",
-        "price": 6.27,
-        updatedAt: new Date("2026-04-09T12:21:10.345Z"),
-        "confirmations": 2
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-3001098387",
-    "name": "Posto BR",
-    "brand": "Petrobras",
-    "address": "Avenida Arquiteto José Henriques Bento Rodrigues",
-    "neighborhood": "Manaus",
-    "latitude": -2.9996595,
-    "longitude": -59.9983175,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.38,
-        updatedAt: new Date("2026-04-09T14:26:20.665Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "aditivada",
-        "price": 6.68,
-        updatedAt: new Date("2026-04-09T14:26:20.665Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "etanol",
-        "price": 4.58,
-        updatedAt: new Date("2026-04-09T04:26:20.665Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-3010295446",
-    "name": "Posto Atem",
-    "brand": "Atem",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.1144784,
-    "longitude": -60.0157918,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.35,
-        updatedAt: new Date("2026-04-09T12:28:06.541Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "aditivada",
-        "price": 6.65,
-        updatedAt: new Date("2026-04-09T12:28:06.541Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "etanol",
-        "price": 4.55,
-        updatedAt: new Date("2026-04-09T08:28:06.541Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-3016908916",
-    "name": "Atem",
-    "brand": "Atem",
-    "address": "Avenida General Rodrigo Otávio",
-    "neighborhood": "Manaus",
-    "latitude": -3.1373509,
-    "longitude": -59.9890975,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.09,
-        updatedAt: new Date("2026-04-09T06:20:01.621Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "aditivada",
-        "price": 6.39,
-        updatedAt: new Date("2026-04-09T06:20:01.621Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "etanol",
-        "price": 4.29,
-        updatedAt: new Date("2026-04-09T14:20:01.621Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "diesel",
-        "price": 5.89,
-        updatedAt: new Date("2026-04-09T06:20:01.621Z"),
-        "confirmations": 2
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-4040668142",
-    "name": "Posto BR",
-    "brand": "BR",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0901754,
-    "longitude": -60.0268484,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.08,
-        updatedAt: new Date("2026-04-09T08:44:29.485Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "aditivada",
-        "price": 6.38,
-        updatedAt: new Date("2026-04-09T08:44:29.485Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "etanol",
-        "price": 4.28,
-        updatedAt: new Date("2026-04-09T12:44:29.485Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-4045602578",
-    "name": "Posto Shell",
-    "brand": "Shell",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0896128,
-    "longitude": -60.0239393,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.83,
-        updatedAt: new Date("2026-04-09T09:23:49.789Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "aditivada",
-        "price": 6.13,
-        updatedAt: new Date("2026-04-09T09:23:49.789Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "etanol",
-        "price": 4.03,
-        updatedAt: new Date("2026-04-09T11:23:49.789Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-4063867945",
-    "name": "Posto Petrobras",
-    "brand": "BR",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0566993,
-    "longitude": -60.0832062,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.08,
-        updatedAt: new Date("2026-04-09T06:44:36.577Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "aditivada",
-        "price": 6.38,
-        updatedAt: new Date("2026-04-09T06:44:36.577Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "etanol",
-        "price": 4.28,
-        updatedAt: new Date("2026-04-09T08:44:36.577Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-4063886415",
-    "name": "Posto Atem",
-    "brand": "Atem",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -2.9839183,
-    "longitude": -60.0443539,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.26,
-        updatedAt: new Date("2026-04-09T06:33:31.657Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "aditivada",
-        "price": 6.56,
-        updatedAt: new Date("2026-04-09T06:33:31.657Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "etanol",
-        "price": 4.46,
-        updatedAt: new Date("2026-04-09T08:33:31.657Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-4095348963",
-    "name": "Posto Gaspetro",
-    "brand": "Gaspetro",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.1209018,
-    "longitude": -59.9525415,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.49,
-        updatedAt: new Date("2026-04-09T11:55:59.929Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "aditivada",
-        "price": 6.79,
-        updatedAt: new Date("2026-04-09T11:55:59.929Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "etanol",
-        "price": 4.69,
-        updatedAt: new Date("2026-04-09T05:55:59.929Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "diesel",
-        "price": 6.29,
-        updatedAt: new Date("2026-04-09T11:55:59.929Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-4095368003",
-    "name": "Posto Gaspetro",
-    "brand": "Gaspetro",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.1123403,
-    "longitude": -59.9668834,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.88,
-        updatedAt: new Date("2026-04-09T11:44:34.489Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "aditivada",
-        "price": 6.18,
-        updatedAt: new Date("2026-04-09T11:44:34.489Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "etanol",
-        "price": 4.08,
-        updatedAt: new Date("2026-04-09T05:44:34.489Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "diesel",
-        "price": 5.68,
-        updatedAt: new Date("2026-04-09T11:44:34.489Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-4147203389",
-    "name": "Posto BR",
-    "brand": "Petrobras",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.121619,
-    "longitude": -60.0075665,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.83,
-        updatedAt: new Date("2026-04-09T13:23:20.593Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "aditivada",
-        "price": 6.13,
-        updatedAt: new Date("2026-04-09T13:23:20.593Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "etanol",
-        "price": 4.03,
-        updatedAt: new Date("2026-04-09T15:23:20.593Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-4167701342",
-    "name": "Posto Atem",
-    "brand": "Atem",
-    "address": "Rua Conde de Sergimirim",
-    "neighborhood": "Manaus",
-    "latitude": -3.045068,
-    "longitude": -59.9900112,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.01,
-        updatedAt: new Date("2026-04-09T08:24:34.285Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "aditivada",
-        "price": 6.31,
-        updatedAt: new Date("2026-04-09T08:24:34.285Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "etanol",
-        "price": 4.21,
-        updatedAt: new Date("2026-04-09T14:24:34.285Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "diesel",
-        "price": 5.81,
-        updatedAt: new Date("2026-04-09T08:24:34.285Z"),
-        "confirmations": 2
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-4167960227",
-    "name": "Posto Atem",
-    "brand": "atem",
-    "address": "Avenida Autaz Mirim",
-    "neighborhood": "Manaus",
-    "latitude": -3.0567002,
-    "longitude": -59.9479685,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.2,
-        updatedAt: new Date("2026-04-09T05:49:14.425Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "aditivada",
-        "price": 6.5,
-        updatedAt: new Date("2026-04-09T05:49:14.425Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "etanol",
-        "price": 4.4,
-        updatedAt: new Date("2026-04-09T11:49:14.425Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "diesel",
-        "price": 6,
-        updatedAt: new Date("2026-04-09T05:49:14.425Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-4167974189",
-    "name": "Posto Atem",
-    "brand": "atem",
-    "address": "Avenida Autaz Mirim",
-    "neighborhood": "Manaus",
-    "latitude": -3.0590062,
-    "longitude": -59.9490344,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.34,
-        updatedAt: new Date("2026-04-09T05:40:51.793Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "aditivada",
-        "price": 6.64,
-        updatedAt: new Date("2026-04-09T05:40:51.793Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "etanol",
-        "price": 4.54,
-        updatedAt: new Date("2026-04-09T11:40:51.793Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "diesel",
-        "price": 6.14,
-        updatedAt: new Date("2026-04-09T05:40:51.793Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-4697616826",
-    "name": "Posto Equatorial",
-    "brand": "Independente",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0231111,
-    "longitude": -60.0576939,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.97,
-        updatedAt: new Date("2026-04-09T09:15:16.861Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "aditivada",
-        "price": 6.27,
-        updatedAt: new Date("2026-04-09T09:15:16.861Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "etanol",
-        "price": 4.17,
-        updatedAt: new Date("2026-04-09T07:15:16.861Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-4966123568",
-    "name": "Posto Ipiranga",
-    "brand": "Independente",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0865621,
-    "longitude": -59.9285927,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.24,
-        updatedAt: new Date("2026-04-09T14:11:14.149Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "aditivada",
-        "price": 6.54,
-        updatedAt: new Date("2026-04-09T14:11:14.149Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "etanol",
-        "price": 4.44,
-        updatedAt: new Date("2026-04-09T10:11:14.149Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "diesel",
-        "price": 6.04,
-        updatedAt: new Date("2026-04-09T14:11:14.149Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-5049019189",
-    "name": "Posto Atem",
-    "brand": "Independente",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0142164,
-    "longitude": -60.0595617,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.39,
-        updatedAt: new Date("2026-04-09T15:13:51.793Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "aditivada",
-        "price": 6.69,
-        updatedAt: new Date("2026-04-09T15:13:51.793Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "etanol",
-        "price": 4.59,
-        updatedAt: new Date("2026-04-09T09:13:51.793Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-5064009617",
-    "name": "Posto Atem",
-    "brand": "Independente",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0666709,
-    "longitude": -59.9648702,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.9,
-        updatedAt: new Date("2026-04-09T15:19:36.385Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "aditivada",
-        "price": 6.2,
-        updatedAt: new Date("2026-04-09T15:19:36.385Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "etanol",
-        "price": 4.1,
-        updatedAt: new Date("2026-04-09T15:19:36.385Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-5277470263",
-    "name": "Auto Posto DE",
-    "brand": "Atem",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -2.9756566,
-    "longitude": -60.0153759,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.1,
-        updatedAt: new Date("2026-04-09T10:43:13.129Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "aditivada",
-        "price": 6.4,
-        updatedAt: new Date("2026-04-09T10:43:13.129Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "etanol",
-        "price": 4.3,
-        updatedAt: new Date("2026-04-09T04:43:13.129Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-5377841223",
-    "name": "Posto BR",
-    "brand": "Posto BR",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0801677,
-    "longitude": -60.0075671,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.81,
-        updatedAt: new Date("2026-04-09T07:00:38.569Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "aditivada",
-        "price": 6.11,
-        updatedAt: new Date("2026-04-09T07:00:38.569Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "etanol",
-        "price": 4.01,
-        updatedAt: new Date("2026-04-09T09:00:38.569Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-5378128111",
-    "name": "Posto Equador",
-    "brand": "Equador",
-    "address": "Avenida Torquato Tapajós",
-    "neighborhood": "Manaus",
-    "latitude": -2.991568,
-    "longitude": -60.0281435,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.28,
-        updatedAt: new Date("2026-04-09T14:08:30.601Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "aditivada",
-        "price": 6.58,
-        updatedAt: new Date("2026-04-09T14:08:30.601Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "etanol",
-        "price": 4.48,
-        updatedAt: new Date("2026-04-09T06:08:30.601Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "diesel",
-        "price": 6.08,
-        updatedAt: new Date("2026-04-09T14:08:30.601Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-5401104022",
-    "name": "Equador",
-    "brand": "Equador",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0053294,
-    "longitude": -60.0390317,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.44,
-        updatedAt: new Date("2026-04-09T14:22:57.805Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "aditivada",
-        "price": 6.74,
-        updatedAt: new Date("2026-04-09T14:22:57.805Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "etanol",
-        "price": 4.64,
-        updatedAt: new Date("2026-04-09T04:22:57.805Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "diesel",
-        "price": 6.24,
-        updatedAt: new Date("2026-04-09T14:22:57.805Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-5401108676",
-    "name": "Atem",
-    "brand": "Atem",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0012074,
-    "longitude": -60.0435258,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.49,
-        updatedAt: new Date("2026-04-09T14:20:10.261Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "aditivada",
-        "price": 6.79,
-        updatedAt: new Date("2026-04-09T14:20:10.261Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "etanol",
-        "price": 4.69,
-        updatedAt: new Date("2026-04-09T04:20:10.261Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "diesel",
-        "price": 6.29,
-        updatedAt: new Date("2026-04-09T14:20:10.261Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-5827540487",
-    "name": "Posto Ipiranga",
-    "brand": "Ipiranga",
-    "address": "Rua Valério Botelho de Andrade",
-    "neighborhood": "Manaus",
-    "latitude": -3.1110438,
-    "longitude": -60.0067058,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6,
-        updatedAt: new Date("2026-04-09T10:01:05.065Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "aditivada",
-        "price": 6.3,
-        updatedAt: new Date("2026-04-09T10:01:05.065Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "etanol",
-        "price": 4.2,
-        updatedAt: new Date("2026-04-09T12:01:05.065Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "diesel",
-        "price": 5.8,
-        updatedAt: new Date("2026-04-09T10:01:05.065Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-9561297602",
-    "name": "Posto Equador",
-    "brand": "Equador Energia",
-    "address": "Avenida do Turismo",
-    "neighborhood": "Manaus",
-    "latitude": -3.0258837,
-    "longitude": -60.0577082,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.98,
-        updatedAt: new Date("2026-04-09T12:26:48.925Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "aditivada",
-        "price": 6.28,
-        updatedAt: new Date("2026-04-09T12:26:48.925Z"),
-        "confirmations": 3
-      },
-      {
-        "type": "etanol",
-        "price": 4.18,
-        updatedAt: new Date("2026-04-09T06:26:48.925Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-9570801171",
-    "name": "BR",
-    "brand": "BR",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0866629,
-    "longitude": -60.0043707,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.81,
-        updatedAt: new Date("2026-04-09T07:24:40.441Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "aditivada",
-        "price": 6.11,
-        updatedAt: new Date("2026-04-09T07:24:40.441Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "etanol",
-        "price": 4.01,
-        updatedAt: new Date("2026-04-09T07:24:40.441Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-10108416274",
-    "name": "Posto Atem",
-    "brand": "Atem",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -2.983434,
-    "longitude": -60.0544266,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.96,
-        updatedAt: new Date("2026-04-09T11:15:36.733Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "aditivada",
-        "price": 6.26,
-        updatedAt: new Date("2026-04-09T11:15:36.733Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "etanol",
-        "price": 4.16,
-        updatedAt: new Date("2026-04-09T07:15:36.733Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-10976574142",
-    "name": "Atem",
-    "brand": "Independente",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0838728,
-    "longitude": -60.0017661,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.94,
-        updatedAt: new Date("2026-04-09T09:40:53.485Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "aditivada",
-        "price": 6.24,
-        updatedAt: new Date("2026-04-09T09:40:53.485Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "etanol",
-        "price": 4.14,
-        updatedAt: new Date("2026-04-09T13:40:53.485Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "diesel",
-        "price": 5.74,
-        updatedAt: new Date("2026-04-09T09:40:53.485Z"),
-        "confirmations": 2
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-10976574986",
-    "name": "Atem",
-    "brand": "Independente",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0856944,
-    "longitude": -59.9896225,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.95,
-        updatedAt: new Date("2026-04-09T09:40:23.101Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "aditivada",
-        "price": 6.25,
-        updatedAt: new Date("2026-04-09T09:40:23.101Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "etanol",
-        "price": 4.15,
-        updatedAt: new Date("2026-04-09T13:40:23.101Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "diesel",
-        "price": 5.75,
-        updatedAt: new Date("2026-04-09T09:40:23.101Z"),
-        "confirmations": 2
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-10976577525",
-    "name": "Atem",
-    "brand": "Atem",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0910355,
-    "longitude": -59.9922651,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.98,
-        updatedAt: new Date("2026-04-09T09:38:51.697Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "aditivada",
-        "price": 6.28,
-        updatedAt: new Date("2026-04-09T09:38:51.697Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "etanol",
-        "price": 4.18,
-        updatedAt: new Date("2026-04-09T13:38:51.697Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "diesel",
-        "price": 5.78,
-        updatedAt: new Date("2026-04-09T09:38:51.697Z"),
-        "confirmations": 2
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-10976594393",
-    "name": "Atem",
-    "brand": "Independente",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0867473,
-    "longitude": -60.0119691,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.14,
-        updatedAt: new Date("2026-04-09T09:28:44.449Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "aditivada",
-        "price": 6.44,
-        updatedAt: new Date("2026-04-09T09:28:44.449Z"),
-        "confirmations": 1
-      },
-      {
-        "type": "etanol",
-        "price": 4.34,
-        updatedAt: new Date("2026-04-09T13:28:44.449Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "diesel",
-        "price": 5.94,
-        updatedAt: new Date("2026-04-09T09:28:44.449Z"),
-        "confirmations": 2
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-11362818636",
-    "name": "Posto Ipitanga",
-    "brand": "Independente",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.0733154,
-    "longitude": -59.9377267,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.99,
-        updatedAt: new Date("2026-04-09T07:14:11.701Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "aditivada",
-        "price": 6.29,
-        updatedAt: new Date("2026-04-09T07:14:11.701Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "etanol",
-        "price": 4.19,
-        updatedAt: new Date("2026-04-09T15:14:11.701Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-11655978308",
-    "name": "Posto Atem",
-    "brand": "Atem",
-    "address": "Avenida Jacira Reis",
-    "neighborhood": "Manaus",
-    "latitude": -3.0955211,
-    "longitude": -60.0422922,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.38,
-        updatedAt: new Date("2026-04-09T05:38:23.509Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "aditivada",
-        "price": 6.68,
-        updatedAt: new Date("2026-04-09T05:38:23.509Z"),
-        "confirmations": 5
-      },
-      {
-        "type": "etanol",
-        "price": 4.58,
-        updatedAt: new Date("2026-04-09T11:38:23.509Z"),
-        "confirmations": 4
-      },
-      {
-        "type": "diesel",
-        "price": 6.18,
-        updatedAt: new Date("2026-04-09T05:38:23.509Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-  {
-    "id": "osm-12407613071",
-    "name": "Atem",
-    "brand": "Atem",
-    "address": "Endereço não cadastrado",
-    "neighborhood": "Manaus",
-    "latitude": -3.1066385,
-    "longitude": -60.0233734,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 5.93,
-        updatedAt: new Date("2026-04-09T09:17:32.041Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "aditivada",
-        "price": 6.23,
-        updatedAt: new Date("2026-04-09T09:17:32.041Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "etanol",
-        "price": 4.13,
-        updatedAt: new Date("2026-04-09T07:17:32.041Z"),
-        "confirmations": 1
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  },
-   {
-    "id": "osm-1366693708",
-    "name": "Posto Petrobras Djalma ",
-    "brand": "BR",
-    "address": "Av.Djalma Batista,535 - Nossa Sra. das Graças, Manaus - AM, 69053-355",
-    "neighborhood": "Nossa Senhora das Gracas",
-    "latitude": -3.1053934 ,
-    "longitude": -60.0230559,
-    "prices": [
-      {
-        "type": "gasolina",
-        "price": 6.34,
-        updatedAt: new Date("2026-04-09T08:29:09.145Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "aditivada",
-        "price": 6.64,
-        updatedAt: new Date("2026-04-09T08:29:09.145Z"),
-        "confirmations": 2
-      },
-      {
-        "type": "etanol",
-        "price": 4.54,
-        updatedAt: new Date("2026-04-09T04:29:09.145Z"),
-        "confirmations": 3
-      }
-    ],
-    "reviews": [],
-    "priceHistory": {
-      "gasolina": []
-    },
-    "amenities": [
-      "Conveniência"
-    ]
-  }
-];
-
 export const STATIONS: Station[] = RAW_STATIONS.map((station, stationIndex) => ({
   ...station,
-  neighborhood: inferStationNeighborhood(station),
+  neighborhood: getStationNeighborhood(station),
   prices: station.prices.map((price, priceIndex) => ({
     ...price,
     updatedAt: getMockPriceUpdatedAt(stationIndex, priceIndex),
@@ -2253,11 +209,11 @@ export const FUEL_TYPE_LABELS: Record<FuelType, string> = {
 };
 
 export const FUEL_TYPE_ICONS: Record<FuelType, string> = {
-  gasolina: '⛽',
-  aditivada: '✨',
-  etanol: '🌿',
-  diesel: '🚛',
-  gnv: '💨',
+  gasolina: 'G',
+  aditivada: 'A',
+  etanol: 'E',
+  diesel: 'D',
+  gnv: 'GNV',
 };
 
 export function getPriceCategory(price: number): 'cheap' | 'medium' | 'expensive' {
@@ -2275,20 +231,24 @@ export function getPriceCategoryColor(category: 'cheap' | 'medium' | 'expensive'
   return colors[category];
 }
 
-export function isOutdated(date: Date): boolean {
-  const hoursOld = (new Date().getTime() - date.getTime()) / (1000 * 60 * 60);
+function toDate(value: Date | string | number): Date {
+  return value instanceof Date ? value : new Date(value);
+}
+
+export function isOutdated(date: Date | string): boolean {
+  const hoursOld = (Date.now() - toDate(date).getTime()) / (1000 * 60 * 60);
   return hoursOld > 48;
 }
 
 export function getPriceConfidence(price: FuelPrice): PriceConfidence {
-  const hoursOld = (new Date().getTime() - price.updatedAt.getTime()) / (1000 * 60 * 60);
+  const hoursOld = (Date.now() - toDate(price.updatedAt).getTime()) / (1000 * 60 * 60);
   if (hoursOld <= 24 && price.confirmations >= 2) return 'confirmed';
   if (hoursOld <= 48) return 'recent';
   return 'outdated';
 }
 
-export function formatTimeAgo(date: Date): string {
-  const minutes = Math.floor((new Date().getTime() - date.getTime()) / (1000 * 60));
+export function formatTimeAgo(date: Date | string): string {
+  const minutes = Math.floor((Date.now() - toDate(date).getTime()) / (1000 * 60));
   if (minutes < 60) return `${minutes}min atrás`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h atrás`;
@@ -2298,6 +258,215 @@ export function formatTimeAgo(date: Date): string {
 
 export function getLowestPrice(station: Station, fuelType: FuelType = 'gasolina'): FuelPrice | undefined {
   return station.prices.find(p => p.type === fuelType);
+}
+
+export function getPriceSource(price?: FuelPrice): PriceSource {
+  if (!price) return 'catalog';
+  if (price.source) return price.source;
+  if (price.isLive) return 'sefaz';
+  if (price.isReference) return 'reference';
+  return 'user';
+}
+
+export function getPriceSourceLabel(price?: FuelPrice): string {
+  const source = getPriceSource(price);
+  if (source === 'sefaz') return 'SEFAZ';
+  if (source === 'user') return 'usuario';
+  if (source === 'reference') return 'referencia';
+  return 'catalogo';
+}
+
+/** Raio padrão do mapa */
+export const MAP_NEARBY_RADIUS_KM = 20;
+export const MAP_RADIUS_OPTIONS_KM = [10, 20, 30, 50] as const;
+export type MapRadiusKm = (typeof MAP_RADIUS_OPTIONS_KM)[number];
+/** Busca por bairro pode abranger mais área */
+export const MAP_SEARCH_RADIUS_KM = 40;
+export const MAP_MIN_NEARBY_STATIONS = 24;
+export const MAP_NEARBY_BACKFILL_RADIUS_KM = 50;
+
+export type MapViewMode = 'distance' | 'all';
+
+/** Área aproximada de Manaus para modo "todos os postos" */
+export const MANAUS_BBOX = {
+  minLat: -3.18,
+  maxLat: -2.92,
+  minLng: -60.18,
+  maxLng: -59.82,
+};
+
+/** Modo "todos" usa clustering — limite alto só para performance */
+export const MAP_ALL_MODE_MAX_STATIONS = 400;
+
+export type MapPinTier = 'live' | 'user' | 'reference' | 'catalog';
+
+export type MapStationView = Station & {
+  mapPinTier: MapPinTier;
+};
+
+function stationCoords(station: Station) {
+  return {
+    latitude: Number(station.latitude),
+    longitude: Number(station.longitude),
+  };
+}
+
+function inManausBBox(latitude: number, longitude: number): boolean {
+  return (
+    latitude >= MANAUS_BBOX.minLat &&
+    latitude <= MANAUS_BBOX.maxLat &&
+    longitude >= MANAUS_BBOX.minLng &&
+    longitude <= MANAUS_BBOX.maxLng
+  );
+}
+
+function buildMapRows(
+  stations: Station[],
+  fuelType: FuelType,
+  anchor: { latitude: number; longitude: number },
+  liveOnly: boolean,
+) {
+  const anchorLat = Number(anchor.latitude);
+  const anchorLng = Number(anchor.longitude);
+
+  return stations
+    .map((station) => {
+      const coords = stationCoords(station);
+      const price = station.prices.find((p) => p.type === fuelType);
+      const mapPinTier: MapPinTier = price?.source === 'sefaz' || price?.isLive
+        ? 'live'
+        : price?.source === 'user'
+          ? 'user'
+          : price
+            ? 'reference'
+            : 'catalog';
+      if (liveOnly && mapPinTier !== 'live') return null;
+
+      return {
+        station,
+        distance: calculateDistance(anchorLat, anchorLng, coords.latitude, coords.longitude),
+        mapPinTier,
+      };
+    })
+    .filter((row): row is { station: Station; distance: number; mapPinTier: MapPinTier } => row !== null);
+}
+
+export function filterStationsForMap(
+  stations: Station[],
+  fuelType: FuelType,
+  anchor: { latitude: number; longitude: number },
+  options?: {
+    viewMode?: MapViewMode;
+    searchQuery?: string;
+    radiusKm?: number;
+    searchRadiusKm?: number;
+    /** Se true, oculta postos sem preço SEFAZ recente */
+    liveOnly?: boolean;
+  },
+): MapStationView[] {
+  const viewMode = options?.viewMode ?? 'distance';
+  const radiusKm = options?.radiusKm ?? MAP_NEARBY_RADIUS_KM;
+  const searchRadiusKm = options?.searchRadiusKm ?? MAP_SEARCH_RADIUS_KM;
+  const query = options?.searchQuery?.trim() ?? '';
+  const liveOnly = options?.liveOnly ?? false;
+  const withFuel = buildMapRows(stations, fuelType, anchor, liveOnly);
+  const withinRadius = (distance: number, limitKm: number) => distance <= limitKm;
+
+  if (query) {
+    const matched = withFuel.filter(({ station, distance }) => {
+      if (!stationMatchesSearch(station, query)) return false;
+      if (viewMode === 'all') return inManausBBox(station.latitude, station.longitude);
+      return withinRadius(distance, Math.max(radiusKm, searchRadiusKm));
+    });
+    return matched
+      .sort((a, b) => a.distance - b.distance)
+      .map(({ station, distance, mapPinTier }) => ({ ...station, distance, mapPinTier }));
+  }
+
+  if (viewMode === 'all') {
+    const inCity = withFuel.filter(({ station }) =>
+      inManausBBox(station.latitude, station.longitude),
+    );
+    const sorted = [...inCity].sort((a, b) => a.distance - b.distance);
+    return sorted.slice(0, MAP_ALL_MODE_MAX_STATIONS).map(({ station, distance, mapPinTier }) => ({
+      ...station,
+      distance,
+      mapPinTier,
+    }));
+  }
+
+  const inRadius = withFuel.filter(({ distance }) => withinRadius(distance, radiusKm));
+  const rows = query
+    ? inRadius
+    : inRadius.length >= MAP_MIN_NEARBY_STATIONS
+      ? inRadius
+      : withFuel
+          .filter(({ distance }) => withinRadius(distance, Math.max(radiusKm, MAP_NEARBY_BACKFILL_RADIUS_KM)))
+          .sort((a, b) => a.distance - b.distance)
+          .slice(0, Math.min(MAP_MIN_NEARBY_STATIONS, withFuel.length));
+
+  return rows
+    .sort((a, b) => a.distance - b.distance)
+    .map(({ station, distance, mapPinTier }) => ({ ...station, distance, mapPinTier }));
+}
+
+/** Lista alinhada aos filtros do mapa */
+export function filterStationsForList(
+  stations: Station[],
+  fuelType: FuelType,
+  anchor: { latitude: number; longitude: number },
+  options?: {
+    viewMode?: MapViewMode;
+    radiusKm?: number;
+    searchRadiusKm?: number;
+    liveOnly?: boolean;
+    searchQuery?: string;
+    selectedBrand?: string | null;
+  },
+): Array<Station & { distance: number }> {
+  const viewMode = options?.viewMode ?? 'distance';
+  const radiusKm = options?.radiusKm ?? MAP_NEARBY_RADIUS_KM;
+  const searchRadiusKm = options?.searchRadiusKm ?? MAP_SEARCH_RADIUS_KM;
+  const liveOnly = options?.liveOnly ?? false;
+  const query = options?.searchQuery?.trim() ?? '';
+  const anchorLat = Number(anchor.latitude);
+  const anchorLng = Number(anchor.longitude);
+
+  let list = stations
+    .map((station) => ({
+      ...station,
+      distance: calculateDistance(
+        anchorLat,
+        anchorLng,
+        Number(station.latitude),
+        Number(station.longitude),
+      ),
+    }))
+    .filter((station) => {
+      const price = station.prices.find((p) => p.type === fuelType);
+      if (!price) return false;
+      if (liveOnly && !price.isLive) return false;
+      return true;
+    });
+
+  if (options?.selectedBrand) {
+    list = list.filter((s) => s.brand === options.selectedBrand);
+  }
+
+  if (query) {
+    list = list.filter((s) => stationMatchesSearch(s, query));
+    if (viewMode === 'distance') {
+      list = list.filter((s) => s.distance <= searchRadiusKm);
+    } else {
+      list = list.filter((s) => inManausBBox(s.latitude, s.longitude));
+    }
+  } else if (viewMode === 'distance') {
+    list = list.filter((s) => s.distance <= radiusKm);
+  } else {
+    list = list.filter((s) => inManausBBox(s.latitude, s.longitude));
+  }
+
+  return list;
 }
 
 export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {

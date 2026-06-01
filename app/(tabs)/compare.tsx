@@ -32,7 +32,7 @@ const FUEL_TYPES: FuelType[] = ['gasolina', 'aditivada', 'etanol', 'diesel', 'gn
 const DEFAULT_TANK = 50; // litros
 
 export default function CompareScreen() {
-  const { colors, tokens } = useTheme();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { state, dispatch } = useApp();
   const [tankSize, setTankSize] = useState(DEFAULT_TANK);

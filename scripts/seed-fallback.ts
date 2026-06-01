@@ -3,7 +3,7 @@ import DatabaseConstructor from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { stations } from "../drizzle/schema";
 
-const DB_PATH = (process.env.DATABASE_URL ?? "file:./drizzle/db.sqlite").replace("file:", "");
+const DB_PATH = (process.env.DATABASE_URL ?? "file:./local.db").replace("file:", "");
 const sqlite = new DatabaseConstructor(DB_PATH);
 const db = drizzle(sqlite);
 

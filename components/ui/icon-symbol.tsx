@@ -1,7 +1,7 @@
 // Fallback for using MaterialIcons on Android and web.
 
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { SymbolWeight, SymbolViewProps } from "expo-symbols";
+import type { SymbolWeight, SymbolViewProps } from "expo-symbols";
 import { ComponentProps } from "react";
 import { OpaqueColorValue, type StyleProp, type TextStyle } from "react-native";
 
@@ -23,6 +23,7 @@ const MAPPING = {
   "map.fill": "map",
   "list.bullet": "format-list-bulleted",
   "arrow.left.arrow.right": "compare-arrows",
+  "arrow.clockwise": "refresh",
   "heart.fill": "favorite",
   "person.fill": "person",
   // FuelMap actions
@@ -39,6 +40,7 @@ const MAPPING = {
   "clock.fill": "schedule",
   "person.2.fill": "group",
   "exclamationmark.triangle.fill": "warning",
+  "exclamationmark.circle.fill": "error",
   "info.circle.fill": "info",
   "chevron.left": "chevron-left",
   "magnifyingglass": "search",
@@ -56,6 +58,9 @@ const MAPPING = {
   "chart.line.uptrend.xyaxis": "show-chart",
   "shield.fill": "verified",
   "wrench.fill": "build",
+  "checkmark.seal.fill": "verified",
+  "archivebox.fill": "inventory-2",
+  "rectangle.portrait.and.arrow.right": "logout",
 } as IconMapping;
 
 /**
@@ -75,5 +80,5 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  return <MaterialIcons color={color} size={size} name={MAPPING[name] ?? "help-outline"} style={style} />;
 }

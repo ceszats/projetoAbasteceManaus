@@ -8,6 +8,8 @@ import {
   STATIONS,
   MANAUS_CENTER,
   stationMatchesSearch,
+  filterStationsForMap,
+  filterStationsForList,
 } from '../data/stations';
 
 describe('getPriceCategory', () => {
@@ -132,6 +134,82 @@ describe('STATIONS data', () => {
     const freshPrices = prices.filter(p => !isOutdated(p.updatedAt));
 
     expect(freshPrices.length).toBeGreaterThan(prices.length * 0.6);
+  });
+});
+
+describe('filterStationsForMap', () => {
+  it('limits by radius in distance mode', () => {
+    const anchor = { latitude: MANAUS_CENTER.latitude, longitude: MANAUS_CENTER.longitude };
+    const nearby = filterStationsForMap(STATIONS, 'gasolina', anchor, {
+      viewMode: 'distance',
+      radiusKm: 3,
+    });
+    const all = filterStationsForMap(STATIONS, 'gasolina', anchor, {
+      viewMode: 'all',
+    });
+
+    expect(nearby.length).toBeLessThanOrEqual(all.length);
+  });
+
+  it('filters live only when requested', () => {
+    const anchor = { latitude: MANAUS_CENTER.latitude, longitude: MANAUS_CENTER.longitude };
+    const liveOnly = filterStationsForMap(STATIONS, 'gasolina', anchor, {
+      viewMode: 'all',
+      liveOnly: true,
+    });
+
+    expect(liveOnly.every((s) => s.mapPinTier === 'live')).toBe(true);
+  });
+
+  it('includes nearby catalog stations without selected fuel price', () => {
+    const anchor = { latitude: MANAUS_CENTER.latitude, longitude: MANAUS_CENTER.longitude };
+    const baseStation = STATIONS[0];
+    const stationWithoutGasolina = {
+      ...baseStation,
+      id: 'nearby-without-gasolina',
+      latitude: MANAUS_CENTER.latitude,
+      longitude: MANAUS_CENTER.longitude,
+      prices: baseStation.prices.filter((price) => price.type !== 'gasolina'),
+    };
+
+    const result = filterStationsForMap([stationWithoutGasolina], 'gasolina', anchor, {
+      viewMode: 'distance',
+      radiusKm: 5,
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].mapPinTier).toBe('catalog');
+  });
+});
+
+describe('filterStationsForList', () => {
+  it('keeps search results spatially aligned with distance mode', () => {
+    const anchor = { latitude: MANAUS_CENTER.latitude, longitude: MANAUS_CENTER.longitude };
+    const baseStation = STATIONS.find((station) => station.prices.some((price) => price.type === 'gasolina'))!;
+    const stations = [
+      {
+        ...baseStation,
+        id: 'near-search-station',
+        name: 'Posto Busca Perto',
+        latitude: MANAUS_CENTER.latitude,
+        longitude: MANAUS_CENTER.longitude,
+      },
+      {
+        ...baseStation,
+        id: 'far-search-station',
+        name: 'Posto Busca Longe',
+        latitude: -2.5,
+        longitude: -60.8,
+      },
+    ];
+
+    const result = filterStationsForList(stations, 'gasolina', anchor, {
+      viewMode: 'distance',
+      searchQuery: 'Posto Busca',
+      searchRadiusKm: 5,
+    });
+
+    expect(result.map((station) => station.id)).toEqual(['near-search-station']);
   });
 });
 

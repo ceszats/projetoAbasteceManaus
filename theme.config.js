@@ -1,6 +1,6 @@
 /**
  * Abastece Manaus - Design System Tokens
- * Identidade utilitaria inspirada em economia, combustivel e Manaus.
+ * Identidade utilitaria inspirada em economia, combustivel, rios e floresta.
  *
  * Estrutura:
  * - baseColors: paleta bruta
@@ -10,16 +10,22 @@
 
 const baseColors = {
   forest: {
-    DEFAULT: '#15803D',
-    light: '#22C55E',
-    dark: '#14532D',
-    tint: '#F0FDF4',
+    DEFAULT: '#1B6B43',
+    light: '#2E8B57',
+    dark: '#0F3D2E',
+    tint: '#EDF8F1',
+  },
+  river: {
+    DEFAULT: '#1F7A8C',
+    light: '#35A7B8',
+    dark: '#145766',
+    tint: '#EAF7F9',
   },
   amber: {
-    DEFAULT: '#F59E0B',
-    light: '#FBBF24',
-    dark: '#B45309',
-    tint: '#FFFBEB',
+    DEFAULT: '#F2C14E',
+    light: '#F7D77A',
+    dark: '#9A6B10',
+    tint: '#FFF8E2',
   },
   red: {
     DEFAULT: '#DC2626',
@@ -47,16 +53,16 @@ const baseColors = {
 
 const themeColors = {
   primary: { light: baseColors.forest.DEFAULT, dark: baseColors.forest.light },
-  secondary: { light: baseColors.amber.DEFAULT, dark: baseColors.amber.light },
+  secondary: { light: baseColors.river.DEFAULT, dark: baseColors.river.light },
   accent: { light: baseColors.amber.dark, dark: baseColors.amber.light },
 
-  background: { light: baseColors.slate[50], dark: '#07130B' },
-  surface: { light: '#FFFFFF', dark: '#102016' },
-  card: { light: '#FFFFFF', dark: '#14261A' },
+  background: { light: '#F7FAF8', dark: '#07130F' },
+  surface: { light: '#FFFFFF', dark: '#102019' },
+  card: { light: '#FFFFFF', dark: '#14261E' },
 
-  foreground: { light: baseColors.slate[900], dark: '#ECFDF3' },
-  muted: { light: baseColors.slate[600], dark: '#A7B8AA' },
-  border: { light: baseColors.slate[200], dark: '#24452F' },
+  foreground: { light: '#1F2933', dark: '#ECFDF3' },
+  muted: { light: '#5D6B62', dark: '#A7B8AA' },
+  border: { light: '#D9E7DE', dark: '#244534' },
   tint: { light: baseColors.forest.DEFAULT, dark: baseColors.forest.light },
 
   success: { light: baseColors.forest.DEFAULT, dark: baseColors.forest.light },
@@ -67,7 +73,7 @@ const themeColors = {
   priceMedium: { light: baseColors.amber.DEFAULT, dark: baseColors.amber.light },
   priceExpensive: { light: baseColors.red.DEFAULT, dark: baseColors.red.light },
 
-  fuelGasoline: { light: baseColors.fuel.gasoline, dark: '#60A5FA' },
+  fuelGasoline: { light: baseColors.river.DEFAULT, dark: '#60D4E6' },
   fuelEthanol: { light: baseColors.fuel.ethanol, dark: '#4ADE80' },
   fuelDiesel: { light: baseColors.fuel.diesel, dark: '#A78BFA' },
   fuelGnv: { light: baseColors.fuel.gnv, dark: '#38BDF8' },
@@ -143,8 +149,8 @@ const tokens = {
   },
   gradients: {
     primary: [baseColors.forest.light, baseColors.forest.DEFAULT],
-    secondary: [baseColors.amber.light, baseColors.amber.DEFAULT],
-    nature: [baseColors.forest.DEFAULT, '#059669'],
+    secondary: [baseColors.river.light, baseColors.river.DEFAULT],
+    nature: [baseColors.river.DEFAULT, baseColors.forest.DEFAULT],
     surface: ['#FFFFFF', baseColors.forest.tint],
   },
 };

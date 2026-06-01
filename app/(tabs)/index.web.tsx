@@ -7,13 +7,15 @@ import { useColors } from '@/hooks/theme/use-colors';
 import { useApp } from '@/context/AppContext';
 import { useRouter } from 'expo-router';
 import {
+  MANAUS_CENTER,
+  type MapRadiusKm,
   getPriceCategory,
   getPriceCategoryColor,
   formatTimeAgo,
   isOutdated,
   FuelType,
   Station,
-  stationMatchesSearch,
+  filterStationsForMap,
 } from '@/data/stations';
 
 export default function MapScreenWeb() {
@@ -21,13 +23,21 @@ export default function MapScreenWeb() {
   const router = useRouter();
   const { state, dispatch } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
+  const [mapRadiusKm] = useState<MapRadiusKm>(10);
 
   const fuelType = state.selectedFuelType;
-  const filteredStations = useMemo(() => {
-    const query = searchQuery.trim();
-    if (!query) return state.stations;
-    return state.stations.filter((station) => stationMatchesSearch(station, query));
-  }, [searchQuery, state.stations]);
+  const anchorLat = state.userLocation?.latitude ?? MANAUS_CENTER.latitude;
+  const anchorLng = state.userLocation?.longitude ?? MANAUS_CENTER.longitude;
+  const filteredStations = useMemo(
+    () =>
+      filterStationsForMap(
+        state.stations,
+        fuelType,
+        { latitude: anchorLat, longitude: anchorLng },
+        { searchQuery, radiusKm: mapRadiusKm },
+      ),
+    [state.stations, fuelType, anchorLat, anchorLng, searchQuery, mapRadiusKm],
+  );
 
   const handleFuelSelect = useCallback((type: FuelType) => {
     dispatch({ type: 'SET_FUEL_TYPE', fuelType: type });

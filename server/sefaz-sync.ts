@@ -10,7 +10,7 @@
  *  - stationId   → id do posto em data/stations.ts ou "cnpj-{CNPJ}" como fallback
  */
 
-import { getDb } from "./db";
+import { getDb, hasSefazContribution, pruneSefazContributions } from "./db";
 import { contributions, stations } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { Agent } from "undici";
@@ -48,7 +48,7 @@ const FUEL_MAP: { query: string; fuelType: string }[] = [
   { query: "GASOLINA ADITIVADA", fuelType: "aditivada" },
   { query: "ETANOL HIDRATADO",   fuelType: "etanol"    },
   { query: "OLEO DIESEL S10",    fuelType: "diesel"    },
-  { query: "GAS NATURAL",        fuelType: "gnv"       },
+  { query: "GAS NATURAL VEICULAR", fuelType: "gnv"     },
 ];
 
 // ---------------------------------------------------------------------------
@@ -178,29 +178,41 @@ async function matchStation(hit: SefazHit): Promise<string> {
 
     if (best && best.score >= 3) return best.id;
 
-    if (hit.latitude && hit.longitude) {
-      const fallbackId = stableIdFromHit(hit);
-      await db.insert(stations).values({
-        id: fallbackId,
+    const fallbackId = cnpjLimpo ? `cnpj-${cnpjLimpo}` : stableIdFromHit(hit);
+    const latitude = hit.latitude ?? -3.1019;
+    const longitude = hit.longitude ?? -60.025;
+
+    await db.insert(stations).values({
+      id: fallbackId,
+      name: hit.nomeEmpresa,
+      brand: "Independente",
+      address: hit.enderecoEmpresa || "Endereco nao cadastrado",
+      neighborhood: "Manaus",
+      latitude,
+      longitude,
+      cnpj: cnpjLimpo || null,
+      amenities: JSON.stringify(["SEFAZ"]),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }).onConflictDoUpdate({
+      target: stations.id,
+      set: {
         name: hit.nomeEmpresa,
-        brand: "Independente",
         address: hit.enderecoEmpresa || "Endereco nao cadastrado",
-        neighborhood: "Manaus",
-        latitude: hit.latitude,
-        longitude: hit.longitude,
+        latitude,
+        longitude,
         cnpj: cnpjLimpo || null,
-        amenities: JSON.stringify(["SEFAZ"]),
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      }).onConflictDoNothing();
-      return fallbackId;
-    }
+      },
+    });
+
+    return fallbackId;
   }
 
   // 2. Override manual por nome
   if (NAME_OVERRIDES[nomeUpper]) return NAME_OVERRIDES[nomeUpper];
 
-  // 4. Fallback: registra com CNPJ como ID temporário
+  // 4. Fallback sem banco
   return cnpjLimpo ? `cnpj-${cnpjLimpo}` : stableIdFromHit(hit);
 }
 
@@ -339,6 +351,28 @@ async function fetchSefazLegacy(query: string): Promise<SefazHit[]> {
   return hits;
 }
 
+async function fetchSefazWithFallback(query: string): Promise<SefazHit[]> {
+  try {
+    const hits = await fetchSefaz(query);
+    const hasUsefulCoordinates = hits.some(
+      (hit) => Number.isFinite(hit.latitude) && Number.isFinite(hit.longitude),
+    );
+
+    if (hits.length > 0 && hasUsefulCoordinates) {
+      console.log(`[SEFAZ] ${hits.length} resultados para ${query}`);
+      return hits;
+    }
+
+    console.warn(`[SEFAZ] Elasticsearch sem coordenadas úteis para ${query}; tentando scraping HTML...`);
+  } catch {
+    console.warn(`[SEFAZ] Elasticsearch falhou para ${query}; tentando scraping HTML...`);
+  }
+
+  const legacyHits = await fetchSefazLegacy(query);
+  console.log(`[SEFAZ] ${legacyHits.length} resultados HTML para ${query}`);
+  return legacyHits;
+}
+
 // ---------------------------------------------------------------------------
 // Função principal exportada
 // ---------------------------------------------------------------------------
@@ -359,6 +393,11 @@ export async function syncSefazPrices(): Promise<{
     return { synced, skipped, errors: [message] };
   }
 
+  const pruned = await pruneSefazContributions(72);
+  if (pruned > 0) {
+    console.log(`[SEFAZ] Limpeza: ${pruned} contribuições antigas removidas`);
+  }
+
   for (const { query, fuelType } of FUEL_MAP) {
     console.log(`[SEFAZ] Buscando: ${query}`);
 
@@ -366,8 +405,7 @@ export async function syncSefazPrices(): Promise<{
 
     // Erros de rede não abortam o sync inteiro — continua para o próximo produto
     try {
-      hits = await fetchSefaz(query);
-      console.log(`[SEFAZ] ${hits.length} resultados para ${query}`);
+      hits = await fetchSefazWithFallback(query);
     } catch (err) {
       console.warn(`[SEFAZ] Elasticsearch falhou para ${query}; tentando scraping HTML...`);
       try {
@@ -398,19 +436,25 @@ export async function syncSefazPrices(): Promise<{
       }
 
       const stationId = await matchStation(hit);
+      const priceStr = hit.valorUnitario.toFixed(3);
+      const createdAt = new Date(hit.dataEmissao).toISOString();
 
-      // INSERT separado com try/catch — duplicatas são ignoradas silenciosamente
+      if (await hasSefazContribution(stationId, fuelType, priceStr, createdAt)) {
+        skipped++;
+        continue;
+      }
+
       try {
         await db.insert(contributions).values({
-          userId: 0, // contribuição automática da SEFAZ
+          userId: 0,
           stationId,
           fuelType,
-          price: hit.valorUnitario.toFixed(3),
-          createdAt: new Date(hit.dataEmissao).toISOString(), // data da NFC-e, não do sistema
+          price: priceStr,
+          source: "sefaz",
+          createdAt,
         });
         synced++;
       } catch {
-        // Silencioso: provavelmente duplicata ou restrição de integridade
         skipped++;
       }
     }

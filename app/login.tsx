@@ -16,22 +16,23 @@ import { useColors } from '@/hooks/theme/use-colors';
 import { PriceAlert, UserContribution, useApp } from '@/context/AppContext';
 import { STATIONS } from '@/data/stations';
 import { startOAuthLogin } from '@/constants/oauth';
+import { persistAuthUser } from '@/lib/auth-session';
+import * as Auth from '@/lib/_core/auth';
 import * as Haptics from 'expo-haptics';
 
 export default function LoginScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { state, dispatch } = useApp();
+  const { state, dispatch, authReady } = useApp();
   const [loading, setLoading] = useState<'google' | 'facebook' | 'demo' | null>(null);
   const [error, setError] = useState('');
 
-  // Redireciona para o app se o usuário já estiver logado
   useEffect(() => {
-    if (state.user) {
+    if (authReady && state.user) {
       router.replace('/(tabs)');
     }
-  }, [state.user]);
+  }, [authReady, state.user, router]);
 
   const handleOAuthLogin = async (provider: 'google' | 'facebook') => {
     setLoading(provider);
@@ -51,7 +52,7 @@ export default function LoginScreen() {
     }
   };
 
-  const handleDemoLogin = () => {
+  const handleDemoLogin = async () => {
     setLoading('demo');
     setError('');
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -76,15 +77,21 @@ export default function LoginScreen() {
       };
     });
 
+    const demoAuthUser: Auth.User = {
+      id: 0,
+      openId: 'demo-local',
+      name: 'Usuário Demonstração',
+      email: 'demo@abastece.local',
+      loginMethod: 'demo',
+      lastSignedIn: new Date(),
+    };
+
+    const appUser = await persistAuthUser(demoAuthUser);
+
     dispatch({
       type: 'HYDRATE',
       state: {
-        user: {
-          id: 0,
-        name: 'Usuário Demonstração',
-          email: 'demo@abastece.local',
-          openId: 'demo-local',
-        },
+        user: appUser,
         favoriteIds: demoStations.slice(0, 3).map((station) => station.id),
         alerts: demoAlerts,
         contributions: demoContributions,
@@ -93,6 +100,16 @@ export default function LoginScreen() {
     });
     router.replace('/(tabs)');
   };
+
+  if (!authReady) {
+    return (
+      <ScreenContainer containerClassName="bg-background" edges={['top', 'left', 'right', 'bottom']}>
+        <View style={[styles.content, { flex: 1, justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer

@@ -18,7 +18,7 @@ import { stations } from "../drizzle/schema";
 // Conexão direta ao banco (sem passar pelo servidor Express)
 // ---------------------------------------------------------------------------
 
-const DB_PATH = (process.env.DATABASE_URL ?? "file:./drizzle/db.sqlite").replace("file:", "");
+const DB_PATH = (process.env.DATABASE_URL ?? "file:./local.db").replace("file:", "");
 const sqlite = new Database(DB_PATH);
 const db = drizzle(sqlite);
 

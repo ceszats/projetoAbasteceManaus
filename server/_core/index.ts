@@ -9,6 +9,9 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { getAllowedOrigins, rateLimit, securityHeaders } from "./security";
 import { syncSefazPrices } from "../sefaz-sync";
+import * as db from "../db";
+
+const routeCache = new Map<string, { expiresAt: number; value: unknown }>();
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -52,6 +55,33 @@ async function startSefazJob(): Promise<void> {
     // Aguarda 6 horas até o próximo ciclo
     await sleep(6 * 60 * 60 * 1000);
   }
+}
+
+function parseCoordinate(value: unknown, label: string): number {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) {
+    throw new Error(`${label} invalido`);
+  }
+  return numberValue;
+}
+
+function routeCacheKey(originLat: number, originLng: number, destinationLat: number, destinationLng: number) {
+  const round = (value: number) => value.toFixed(5);
+  return `${round(originLat)},${round(originLng)}:${round(destinationLat)},${round(destinationLng)}`;
+}
+
+function formatDistance(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(1).replace(".", ",")} km`;
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)} seg`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
 }
 
 async function startServer() {
@@ -161,6 +191,150 @@ async function startServer() {
 
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: Date.now() });
+  });
+
+  app.get("/api/stations", async (_req, res) => {
+    try {
+      const { listStationsWithPrices } = await import("../stations-list");
+      const stations = await listStationsWithPrices();
+      res.json(stations);
+    } catch (err) {
+      console.error("[API] /api/stations failed:", err);
+      res.status(500).json({ error: "Falha ao carregar postos" });
+    }
+  });
+
+  app.get("/api/sefaz/status", async (_req, res) => {
+    try {
+      const { getSefazStatus } = await import("../stations-list");
+      res.json(await getSefazStatus());
+    } catch (err) {
+      console.error("[API] /api/sefaz/status failed:", err);
+      res.status(500).json({ error: "Falha ao carregar status SEFAZ" });
+    }
+  });
+
+  app.post("/api/contributions", async (req, res) => {
+    try {
+      const stationId = String(req.body?.stationId ?? "").trim();
+      const fuelType = String(req.body?.fuelType ?? "");
+      const price = Number(req.body?.price);
+      const validFuelTypes = ["gasolina", "aditivada", "etanol", "diesel", "gnv"];
+
+      if (!stationId || !validFuelTypes.includes(fuelType)) {
+        res.status(400).json({ error: "Posto ou combustivel invalido" });
+        return;
+      }
+
+      if (!Number.isFinite(price) || price < 3 || price > 12) {
+        res.status(400).json({ error: "Preco fora da faixa esperada" });
+        return;
+      }
+
+      const id = await db.addContribution({
+        userId: -1,
+        stationId,
+        fuelType,
+        price: price.toFixed(3).replace(/0+$/, "").replace(/\.$/, ""),
+        source: "user",
+      });
+
+      if (!id) {
+        res.status(500).json({ error: "Falha ao salvar contribuicao" });
+        return;
+      }
+
+      res.status(201).json({ id, source: "user", createdAt: new Date().toISOString() });
+    } catch (err) {
+      console.error("[API] /api/contributions failed:", err);
+      res.status(500).json({ error: "Falha ao salvar contribuicao" });
+    }
+  });
+
+  app.get("/api/admin/overview", async (_req, res) => {
+    try {
+      const { listStationsWithPrices, getSefazStatus } = await import("../stations-list");
+      const [stations, sefazStatus, contributions] = await Promise.all([
+        listStationsWithPrices(),
+        getSefazStatus(),
+        db.getContributionOverview(),
+      ]);
+
+      const pricedStations = stations.filter((station) => station.prices.length > 0).length;
+      const sefazPricedStations = stations.filter((station) =>
+        station.prices.some((price) => price.source === "sefaz"),
+      ).length;
+      const userPricedStations = stations.filter((station) =>
+        station.prices.some((price) => price.source === "user"),
+      ).length;
+
+      res.json({
+        stations: {
+          total: stations.length,
+          withAnyPrice: pricedStations,
+          withSefazPrice: sefazPricedStations,
+          withUserPrice: userPricedStations,
+          withoutPrice: Math.max(0, stations.length - pricedStations),
+        },
+        contributions,
+        sefazStatus,
+      });
+    } catch (err) {
+      console.error("[API] /api/admin/overview failed:", err);
+      res.status(500).json({ error: "Falha ao carregar painel" });
+    }
+  });
+
+  app.get("/api/routes/driving", async (req, res) => {
+    try {
+      const originLat = parseCoordinate(req.query.originLat, "originLat");
+      const originLng = parseCoordinate(req.query.originLng, "originLng");
+      const destinationLat = parseCoordinate(req.query.destinationLat, "destinationLat");
+      const destinationLng = parseCoordinate(req.query.destinationLng, "destinationLng");
+      const cacheKey = routeCacheKey(originLat, originLng, destinationLat, destinationLng);
+      const cached = routeCache.get(cacheKey);
+
+      if (cached && cached.expiresAt > Date.now()) {
+        res.json({ ...(cached.value as object), cached: true });
+        return;
+      }
+
+      const url =
+        `https://router.project-osrm.org/route/v1/driving/` +
+        `${originLng},${originLat};${destinationLng},${destinationLat}` +
+        `?overview=full&geometries=geojson`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8_000);
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        res.status(502).json({ error: "Falha no provedor de rota" });
+        return;
+      }
+
+      const data = await response.json();
+      const route = data?.routes?.[0];
+      const coordinates = route?.geometry?.coordinates;
+      if (data?.code !== "Ok" || !route || !Array.isArray(coordinates)) {
+        res.status(404).json({ error: "Rota nao encontrada" });
+        return;
+      }
+
+      const value = {
+        polyline: coordinates.map(([longitude, latitude]: [number, number]) => ({ latitude, longitude })),
+        distanceMeters: route.distance,
+        durationSeconds: route.duration,
+        distanceLabel: formatDistance(route.distance),
+        durationLabel: formatDuration(route.duration),
+        provider: "osrm",
+      };
+      routeCache.set(cacheKey, { expiresAt: Date.now() + 15 * 60 * 1000, value });
+      res.json({ ...value, cached: false });
+    } catch (err) {
+      console.error("[API] /api/routes/driving failed:", err);
+      res.status(500).json({ error: "Nao foi possivel calcular a rota" });
+    }
   });
 
   app.use(

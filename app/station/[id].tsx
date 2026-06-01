@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
-  Linking,
   Platform,
   Dimensions,
 } from 'react-native';
@@ -14,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useTheme } from '@/hooks/theme/use-theme';
-import { useApp } from '@/context/AppContext';
+import { useApp, type PriceAlert } from '@/context/AppContext';
 import {
   FUEL_TYPE_LABELS,
   FUEL_TYPE_ICONS,
@@ -26,17 +25,27 @@ import {
   FuelType,
   calculateDistance,
   MANAUS_CENTER,
+  getPriceSource,
+  getPriceSourceLabel,
+  type FuelPrice,
 } from '@/data/stations';
 import { trpc } from '@/lib/trpc';
 import { usePriceEngine } from '@/hooks/fuel/use-price-engine';
 import { useNearbyGeofence } from '@/hooks/location/use-nearby-geofence';
+import { getStationBrandColor } from '@/constants/brand-colors';
 import { PriceConfirmBanner } from '@/components/fuel/PriceConfirmBanner';
 import { RouteModal } from '@/components/navigation/RouteModal';
 import * as Haptics from 'expo-haptics';
+import {
+  buildFuelRecommendations,
+  estimateEconomyAgainstNearest,
+  formatCurrency,
+} from '@/lib/fuel-recommendations';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CHART_WIDTH = SCREEN_WIDTH - 64;
 const CHART_HEIGHT = 100;
+const FUEL_TYPES_ORDERED: FuelType[] = ['gasolina', 'aditivada', 'etanol', 'diesel', 'gnv'];
 
 function PriceHistoryChart({ history, color }: { history: { date: Date; price: number }[]; color: string }) {
   if (!history || history.length < 2) return null;
@@ -104,7 +113,8 @@ function StarRating({ rating, size = 14 }: { rating: number; size?: number }) {
 const FUEL_TYPES_ALL: FuelType[] = ['gasolina', 'aditivada', 'etanol', 'diesel', 'gnv'];
 
 export default function StationDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string | string[] }>();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, tokens } = useTheme();
@@ -126,6 +136,18 @@ export default function StationDetailScreen() {
       ),
     };
   }, [id, state.stations, state.favoriteIds, state.userLocation]);
+
+  const stationsWithDistance = useMemo(() => {
+    return state.stations.map((s) => ({
+      ...s,
+      distance: calculateDistance(
+        state.userLocation?.latitude ?? MANAUS_CENTER.latitude,
+        state.userLocation?.longitude ?? MANAUS_CENTER.longitude,
+        s.latitude,
+        s.longitude,
+      ),
+    }));
+  }, [state.stations, state.userLocation]);
 
   // Busca contribuições reais do servidor
   const { data: dbContributions } = trpc.stations.prices.useQuery(
@@ -165,51 +187,68 @@ export default function StationDetailScreen() {
 
   const priceStats = usePriceEngine(currentFuelPrices, selectedFuel);
 
+
+  const displayPrices = useMemo(() => {
+    if (!station) return [];
+    const result: FuelPrice[] = [];
+    for (const ft of FUEL_TYPES_ORDERED) {
+      const fromApi = station.prices.find((p) => p.type === ft);
+      const live = livePriceMap[ft];
+
+      if (fromApi && getPriceSource(fromApi) === 'sefaz') {
+        result.push({
+          type: ft,
+          price: fromApi.price,
+          updatedAt: fromApi.updatedAt,
+          confirmations: fromApi.confirmations,
+          isLive: true,
+          source: 'sefaz',
+        });
+      } else if (live) {
+        result.push({
+          type: ft,
+          price: live.median,
+          updatedAt: live.lastAt,
+          confirmations: live.count,
+          isLive: false,
+          source: 'user',
+        });
+      } else if (fromApi) {
+        result.push({ ...fromApi, isLive: false });
+      }
+    }
+    return result;
+  }, [station, livePriceMap]);
+
+  const selectedPrice = displayPrices.find(p => p.type === selectedFuel);
+  const selectedSource = getPriceSource(selectedPrice);
+  const priceCategory = selectedPrice ? getPriceCategory(selectedPrice.price) : 'medium';
+  const priceColor = getPriceCategoryColor(priceCategory);
+  const selectedConfidence = selectedPrice && !selectedPrice.isLive ? getPriceConfidence(selectedPrice) : null;
+  const history = station?.priceHistory[selectedFuel];
+  const avgRating = station && station.reviews.length > 0
+    ? station.reviews.reduce((s, r) => s + r.rating, 0) / station.reviews.length
+    : 0;
+
+  const brandColor = station ? getStationBrandColor(station.brand, colors.primary) : colors.primary;
+  const recommendations = useMemo(
+    () => buildFuelRecommendations(stationsWithDistance, selectedFuel),
+    [stationsWithDistance, selectedFuel],
+  );
+  const selectedEconomy = useMemo(
+    () => estimateEconomyAgainstNearest(station, recommendations.nearest, selectedFuel),
+    [station, recommendations.nearest, selectedFuel],
+  );
   if (!station) {
     return (
-      <View style={[styles.notFound, { backgroundColor: colors.background }]}>
-        <Text style={[styles.notFoundText, { color: colors.foreground }]}>Posto não encontrado</Text>
+      <View style={[styles.notFound, { backgroundColor: colors.background }]}> 
+        <Text style={[styles.notFoundText, { color: colors.foreground }]}>Posto nao encontrado</Text>
         <Pressable onPress={() => router.back()}>
           <Text style={{ color: colors.primary }}>Voltar</Text>
         </Pressable>
       </View>
     );
   }
-
-  // Mescla preços ao vivo (DB) com estáticos: DB tem prioridade
-  const FUEL_TYPES_ORDERED: FuelType[] = ['gasolina', 'aditivada', 'etanol', 'diesel', 'gnv'];
-  const displayPrices = (() => {
-    const result: { type: FuelType; price: number; updatedAt: Date; confirmations: number; isLive: boolean }[] = [];
-    for (const ft of FUEL_TYPES_ORDERED) {
-      const live = livePriceMap[ft];
-      if (live) {
-        result.push({ type: ft, price: live.median, updatedAt: live.lastAt, confirmations: live.count, isLive: true });
-      } else {
-        const staticP = station.prices.find(p => p.type === ft);
-        if (staticP) result.push({ ...staticP, isLive: false });
-      }
-    }
-    return result;
-  })();
-
-  const selectedPrice = displayPrices.find(p => p.type === selectedFuel);
-  const priceCategory = selectedPrice ? getPriceCategory(selectedPrice.price) : 'medium';
-  const priceColor = getPriceCategoryColor(priceCategory);
-  const selectedConfidence = selectedPrice && !selectedPrice.isLive ? getPriceConfidence(selectedPrice) : null;
-  const history = station.priceHistory[selectedFuel];
-  const avgRating = station.reviews.length > 0
-    ? station.reviews.reduce((s, r) => s + r.rating, 0) / station.reviews.length
-    : 0;
-
-  const brandColors: Record<string, string> = {
-    'Ipiranga': '#FF6B00',
-    'Shell': '#DD1D21',
-    'BR': '#009B3A',
-    'Ale': '#0066CC',
-    'Bandeirante': '#6B21A8',
-    'Raízen': '#DD1D21',
-  };
-  const brandColor = brandColors[station.brand] ?? colors.primary;
 
   const handleFavorite = () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -222,6 +261,20 @@ export default function StationDetailScreen() {
   };
 
   const handleDirections = () => setShowRoute(true);
+
+  const handleQuickAlert = () => {
+    if (!selectedPrice) return;
+    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const alert: PriceAlert = {
+      id: `station-${station.id}-${selectedFuel}-${Date.now()}`,
+      fuelType: selectedFuel,
+      maxPrice: Math.max(1, Number((selectedPrice.price - 0.05).toFixed(2))),
+      stationId: station.id,
+      active: true,
+      createdAt: new Date(),
+    };
+    dispatch({ type: 'ADD_ALERT', alert });
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -277,6 +330,98 @@ export default function StationDetailScreen() {
           />
         )}
 
+        <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.heroBrandStrip, { backgroundColor: brandColor }]} />
+          <View style={styles.heroBody}>
+            <View style={styles.heroTitleRow}>
+              <View style={styles.heroTitleBlock}>
+                <Text style={[styles.heroEyebrow, { color: colors.secondary }]}>
+                  {station.brand} - {station.neighborhood}
+                </Text>
+                <Text style={[styles.heroName, { color: colors.foreground }]} numberOfLines={2}>
+                  {station.name}
+                </Text>
+              </View>
+              <View style={[styles.heroDistancePill, { backgroundColor: colors.primary + '12' }]}>
+                <IconSymbol name="location.fill" size={12} color={colors.primary} />
+                <Text style={[styles.heroDistanceText, { color: colors.primary }]}>
+                  {station.distance < 1 ? `${Math.round(station.distance * 1000)}m` : `${station.distance.toFixed(1)}km`}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.heroPriceRow}>
+              <View>
+                <Text style={[styles.heroPriceLabel, { color: colors.muted }]}>
+                  {FUEL_TYPE_LABELS[selectedFuel]}
+                </Text>
+                <Text style={[styles.heroPriceValue, { color: selectedPrice ? priceColor : colors.muted }]}>
+                  {selectedPrice ? `R$ ${selectedPrice.price.toFixed(2)}` : 'Sem preco'}
+                </Text>
+              </View>
+              <View style={styles.heroStatusStack}>
+                <View style={[styles.heroStatusChip, { backgroundColor: selectedSource === 'sefaz' ? colors.success + '18' : colors.muted + '14' }]}>
+                  <IconSymbol name={selectedSource === 'sefaz' ? 'checkmark.seal.fill' : 'archivebox.fill'} size={11} color={selectedSource === 'sefaz' ? colors.success : colors.muted} />
+                  <Text style={[styles.heroStatusText, { color: selectedSource === 'sefaz' ? colors.success : colors.muted }]}>
+                    {getPriceSourceLabel(selectedPrice)}
+                  </Text>
+                </View>
+                {selectedPrice ? (
+                  <Text style={[styles.heroUpdatedText, { color: colors.muted }]}>
+                    {formatTimeAgo(selectedPrice.updatedAt)}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+
+            {selectedEconomy && selectedEconomy.netSavings > 0 ? (
+              <View style={[styles.economyBox, { backgroundColor: colors.success + '12' }]}>
+                <IconSymbol name="leaf.fill" size={14} color={colors.success} />
+                <Text style={[styles.economyText, { color: colors.success }]}>
+                  Vale a pena: economiza aprox. {formatCurrency(selectedEconomy.netSavings)} em um tanque de 40L.
+                </Text>
+              </View>
+            ) : selectedEconomy ? (
+              <View style={[styles.economyBox, { backgroundColor: colors.warning + '12' }]}>
+                <IconSymbol name="info.circle.fill" size={14} color={colors.warning} />
+                <Text style={[styles.economyText, { color: colors.warning }]}>
+                  Pode nao compensar pelo deslocamento extra de {selectedEconomy.extraDistanceKm.toFixed(1)} km.
+                </Text>
+              </View>
+            ) : null}
+
+            <Pressable
+              onPress={handleDirections}
+              accessibilityRole="button"
+              accessibilityLabel="Tracar rota ate o posto"
+              style={({ pressed }) => [
+                styles.heroRouteButton,
+                { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              <IconSymbol name="car.fill" size={16} color="#fff" />
+              <Text style={styles.heroRouteText}>Tracar rota</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={handleQuickAlert}
+              disabled={!selectedPrice}
+              accessibilityRole="button"
+              accessibilityLabel="Criar alerta para este posto"
+              style={({ pressed }) => [
+                styles.heroAlertButton,
+                {
+                  borderColor: colors.primary,
+                  opacity: pressed || !selectedPrice ? 0.65 : 1,
+                },
+              ]}
+            >
+              <IconSymbol name="bell.fill" size={15} color={colors.primary} />
+              <Text style={[styles.heroAlertText, { color: colors.primary }]}>Avisar se baixar</Text>
+            </Pressable>
+          </View>
+        </View>
+
         {/* Info card */}
         <View style={[styles.infoCard, { backgroundColor: colors.surface, borderRadius: tokens.radius.md, ...tokens.shadows.soft }]}>
           <View style={styles.infoRow}>
@@ -298,7 +443,7 @@ export default function StationDetailScreen() {
             </View>
           )}
           {/* Amenities */}
-          {station.amenities.length > 0 && (
+          {(station.amenities?.length ?? 0) > 0 && (
             <View style={styles.amenitiesRow}>
               {station.amenities.map(a => (
                 <View key={a} style={[styles.amenityChip, { backgroundColor: colors.border + '60', borderColor: colors.border }]}>
@@ -335,9 +480,13 @@ export default function StationDetailScreen() {
                 <Text style={styles.fuelIcon}>{FUEL_TYPE_ICONS[p.type]}</Text>
                 <Text style={[styles.fuelName, { color: colors.foreground }]}>{FUEL_TYPE_LABELS[p.type]}</Text>
                 <View style={styles.priceRight}>
-                  {p.isLive ? (
+                  {getPriceSource(p) === 'sefaz' ? (
                     <View style={{ backgroundColor: colors.success + '25', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 }}>
-                      <Text style={{ fontSize: 9, color: colors.success, fontWeight: '700', letterSpacing: 0.3 }}>AO VIVO</Text>
+                      <Text style={{ fontSize: 9, color: colors.success, fontWeight: '700', letterSpacing: 0.3 }}>SEFAZ</Text>
+                    </View>
+                  ) : getPriceSource(p) === 'user' ? (
+                    <View style={{ backgroundColor: colors.secondary + '22', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 }}>
+                      <Text style={{ fontSize: 9, color: colors.secondary, fontWeight: '700', letterSpacing: 0.3 }}>USUARIO</Text>
                     </View>
                   ) : outdated ? (
                     <IconSymbol name="exclamationmark.triangle.fill" size={12} color={colors.warning} />
@@ -454,7 +603,7 @@ export default function StationDetailScreen() {
           ]}
         >
           <IconSymbol name="pencil" size={16} color={colors.primary} />
-          <Text style={[styles.reportBtnText, { color: colors.primary }]}>Reportar Preço</Text>
+          <Text style={[styles.reportBtnText, { color: colors.primary }]}>Reportar preco</Text>
         </Pressable>
         <Pressable
           onPress={handleDirections}
@@ -468,12 +617,12 @@ export default function StationDetailScreen() {
           ]}
         >
           <IconSymbol name="car.fill" size={16} color="#fff" />
-          <Text style={styles.directionsBtnText}>Como Chegar</Text>
+          <Text style={styles.directionsBtnText}>Tracar rota</Text>
         </Pressable>
       </View>
 
-      {/* Modal de navegação in-app */}
-      {station && (
+      {/* Monta o modal só ao abrir — evita crash do MapView ao entrar na tela */}
+      {station && showRoute && (
         <RouteModal
           visible={showRoute}
           onClose={() => setShowRoute(false)}
@@ -538,6 +687,132 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     gap: 4,
+  },
+  heroCard: {
+    marginBottom: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  heroBrandStrip: {
+    height: 5,
+  },
+  heroBody: {
+    padding: 14,
+    gap: 14,
+  },
+  heroTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  heroTitleBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  heroEyebrow: {
+    fontSize: 11,
+    fontWeight: '900',
+    lineHeight: 15,
+    textTransform: 'uppercase',
+  },
+  heroName: {
+    fontSize: 20,
+    fontWeight: '900',
+    lineHeight: 25,
+  },
+  heroDistancePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  heroDistanceText: {
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 16,
+  },
+  heroPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  heroPriceLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 16,
+  },
+  heroPriceValue: {
+    fontSize: 34,
+    fontWeight: '900',
+    lineHeight: 40,
+  },
+  heroStatusStack: {
+    alignItems: 'flex-end',
+    gap: 5,
+  },
+  heroStatusChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  heroStatusText: {
+    fontSize: 11,
+    fontWeight: '900',
+    lineHeight: 15,
+  },
+  heroUpdatedText: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  heroRouteButton: {
+    minHeight: 46,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  heroAlertButton: {
+    minHeight: 42,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  heroAlertText: {
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 19,
+  },
+  economyBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  economyText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+  heroRouteText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 20,
   },
   infoCard: {
     marginBottom: 8,
@@ -721,3 +996,4 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 });
+

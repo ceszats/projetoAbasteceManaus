@@ -15,33 +15,24 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/hooks/theme/use-colors';
 import { useApp } from '@/context/AppContext';
 import { STATIONS, FuelType, FUEL_TYPE_LABELS, FUEL_TYPE_ICONS } from '@/data/stations';
-import { trpc } from '@/lib/trpc';
+import { reportStationPrice } from '@/lib/report-price';
 import * as Haptics from 'expo-haptics';
 
 const FUEL_TYPES: FuelType[] = ['gasolina', 'aditivada', 'etanol', 'diesel', 'gnv'];
 
 export default function ReportPriceScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, fuelType } = useLocalSearchParams<{ id: string; fuelType?: FuelType }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const colors = useColors();
-  const { state, dispatch } = useApp();
+  const { state, dispatch, reloadStations } = useApp();
 
   const station = state.stations.find(s => s.id === id) ?? STATIONS.find(s => s.id === id);
-  const [selectedFuel, setSelectedFuel] = useState<FuelType>('gasolina');
+  const [selectedFuel, setSelectedFuel] = useState<FuelType>(fuelType ?? 'gasolina');
   const [priceInput, setPriceInput] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
-
-  const addContribution = trpc.contributions.add.useMutation({
-    onSuccess: (_, variables) => {
-      dispatch({ type: 'REPORT_PRICE', stationId: id as string, fuelType: selectedFuel, price: Number(variables.price) });
-      setSubmitted(true);
-    },
-    onError: (err) => {
-      setError(err.message);
-    }
-  });
+  const [submitting, setSubmitting] = useState(false);
 
   if (!station) {
     return (
@@ -53,7 +44,7 @@ export default function ReportPriceScreen() {
 
   const existingPrice = station.prices?.find(p => p.type === selectedFuel);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const price = parseFloat(priceInput.replace(',', '.'));
     if (isNaN(price) || price < 1 || price > 20) {
       setError('Insira um preço válido entre R$ 1,00 e R$ 20,00');
@@ -62,11 +53,22 @@ export default function ReportPriceScreen() {
     setError('');
     if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     
-    addContribution.mutate({
-      stationId: id as string,
-      fuelType: selectedFuel,
-      price: price
-    });
+    setSubmitting(true);
+    try {
+      await reportStationPrice({
+        stationId: id as string,
+        fuelType: selectedFuel,
+        price,
+      });
+      dispatch({ type: 'REPORT_PRICE', stationId: id as string, fuelType: selectedFuel, price });
+      await reloadStations();
+      setSubmitted(true);
+    } catch (err) {
+      dispatch({ type: 'REPORT_PRICE', stationId: id as string, fuelType: selectedFuel, price });
+      setError(err instanceof Error ? `${err.message}. Salvei localmente e tentarei sincronizar quando o servidor voltar.` : 'Falha ao salvar no servidor.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -191,13 +193,14 @@ export default function ReportPriceScreen() {
         {/* Submit */}
         <Pressable
           onPress={handleSubmit}
+          disabled={submitting}
           style={({ pressed }) => [
             styles.submitBtn,
-            { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+            { backgroundColor: colors.primary, opacity: pressed || submitting ? 0.7 : 1 },
           ]}
         >
           <IconSymbol name="checkmark.circle.fill" size={20} color="#fff" />
-          <Text style={styles.submitBtnText}>Confirmar Preço</Text>
+          <Text style={styles.submitBtnText}>{submitting ? 'Salvando...' : 'Confirmar Preço'}</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,9 +18,11 @@ import { GamificationBadge } from '@/components/gamification/GamificationBadge';
 import { useTheme } from '@/hooks/theme/use-theme';
 import { trpc } from '@/lib/trpc';
 import { useApp, PriceAlert } from '@/context/AppContext';
+import { useRouter } from 'expo-router';
 import { FuelType, FUEL_TYPE_LABELS, FUEL_TYPE_ICONS, STATIONS, stationMatchesSearch } from '@/data/stations';
 import { useColorScheme } from '@/hooks/theme/use-color-scheme';
 import { useThemeContext } from '@/lib/theme-provider';
+import { fetchAdminOverview, type AdminOverview } from '@/lib/fetch-admin-overview';
 
 import * as Haptics from 'expo-haptics';
 
@@ -29,7 +31,8 @@ const FUEL_TYPES: FuelType[] = ['gasolina', 'aditivada', 'etanol', 'diesel', 'gn
 export default function ProfileScreen() {
   const { colors, tokens } = useTheme();
   const insets = useSafeAreaInsets();
-  const { state, dispatch } = useApp();
+  const router = useRouter();
+  const { state, dispatch, logout } = useApp();
   const { setColorScheme } = useThemeContext();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -42,6 +45,7 @@ export default function ProfileScreen() {
   // busca de posto no modal de alerta
   const [stationSearch, setStationSearch] = useState('');
   const [showStationPicker, setShowStationPicker] = useState(false);
+  const [adminOverview, setAdminOverview] = useState<AdminOverview | null>(null);
 
   const contributions = state.contributions;
   const alerts = state.alerts;
@@ -50,6 +54,20 @@ export default function ProfileScreen() {
   const { data: reputation } = trpc.user.reputation.useQuery(undefined, {
     enabled: !!state.user
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAdminOverview()
+      .then((overview) => {
+        if (!cancelled) setAdminOverview(overview);
+      })
+      .catch(() => {
+        if (!cancelled) setAdminOverview(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [state.contributions.length, state.stations.length]);
 
   // Postos para o picker de alerta — favoritos primeiro
   const stationsForAlertPicker = useMemo(() => {
@@ -103,6 +121,12 @@ export default function ProfileScreen() {
     setColorScheme(isDark ? 'light' : 'dark');
   };
 
+  const handleLogout = async () => {
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await logout();
+    router.replace('/login');
+  };
+
   return (
     <ScreenContainer containerClassName="bg-background" edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
@@ -150,6 +174,37 @@ export default function ProfileScreen() {
         </View>
 
         {/* Alertas de preço */}
+        {adminOverview ? (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Painel operacional</Text>
+            <View style={[styles.opsPanel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.opsGrid}>
+                <View style={styles.opsMetric}>
+                  <Text style={[styles.opsValue, { color: colors.primary }]}>{adminOverview.stations.total}</Text>
+                  <Text style={[styles.opsLabel, { color: colors.muted }]}>postos</Text>
+                </View>
+                <View style={styles.opsMetric}>
+                  <Text style={[styles.opsValue, { color: colors.success }]}>{adminOverview.stations.withSefazPrice}</Text>
+                  <Text style={[styles.opsLabel, { color: colors.muted }]}>com SEFAZ</Text>
+                </View>
+                <View style={styles.opsMetric}>
+                  <Text style={[styles.opsValue, { color: colors.secondary }]}>{adminOverview.stations.withUserPrice}</Text>
+                  <Text style={[styles.opsLabel, { color: colors.muted }]}>com usuario</Text>
+                </View>
+                <View style={styles.opsMetric}>
+                  <Text style={[styles.opsValue, { color: colors.warning }]}>{adminOverview.stations.withoutPrice}</Text>
+                  <Text style={[styles.opsLabel, { color: colors.muted }]}>sem preco real</Text>
+                </View>
+              </View>
+              <View style={[styles.opsFooter, { borderTopColor: colors.border }]}>
+                <Text style={[styles.opsFooterText, { color: colors.muted }]}>
+                  SEFAZ recentes: {adminOverview.sefazStatus.count} - contribuicoes: {adminOverview.contributions.user}
+                </Text>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Alertas de Preço</Text>
@@ -276,6 +331,21 @@ export default function ProfileScreen() {
                 </View>
               </View>
             </View>
+
+            <Pressable
+              onPress={handleLogout}
+              style={({ pressed }) => [
+                styles.settingRow,
+                { borderBottomWidth: 0, opacity: pressed ? 0.75 : 1 },
+              ]}
+            >
+              <View style={styles.settingLeft}>
+                <View style={[styles.settingIcon, { backgroundColor: colors.error + '18' }]}>
+                  <IconSymbol name="rectangle.portrait.and.arrow.right" size={16} color={colors.error} />
+                </View>
+                <Text style={[styles.settingLabel, { color: colors.error }]}>Sair da conta</Text>
+              </View>
+            </Pressable>
           </View>
         </View>
 
@@ -541,6 +611,42 @@ const styles = StyleSheet.create({
   contributionLabel: {
     fontSize: 10,
     lineHeight: 14,
+  },
+  opsPanel: {
+    borderWidth: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  opsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 12,
+    gap: 10,
+  },
+  opsMetric: {
+    flexBasis: '47%',
+    minHeight: 58,
+    justifyContent: 'center',
+  },
+  opsValue: {
+    fontSize: 22,
+    fontWeight: '900',
+    lineHeight: 27,
+  },
+  opsLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 15,
+  },
+  opsFooter: {
+    borderTopWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  opsFooterText: {
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 16,
   },
   section: {
     gap: 8,

@@ -17,15 +17,12 @@ import {
   ActivityIndicator,
   Platform,
   Linking,
-  Dimensions,
 } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/theme/use-theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useRoute, RoutePoint } from '@/hooks/navigation/use-route';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface RouteModalProps {
   visible: boolean;
@@ -63,14 +60,16 @@ export function RouteModal({
   }, [route]);
 
   const handleOpenMaps = () => {
+    const originParam = userLocation
+      ? `&origin=${userLocation.latitude},${userLocation.longitude}`
+      : '';
+    const webUrl = `https://www.google.com/maps/dir/?api=1${originParam}&destination=${destination.latitude},${destination.longitude}&travelmode=driving`;
     const url = Platform.OS === 'ios'
-      ? `maps://app?daddr=${destination.latitude},${destination.longitude}`
-      : `geo:${destination.latitude},${destination.longitude}?q=${encodeURIComponent(stationName)}`;
+      ? `maps://app?daddr=${destination.latitude},${destination.longitude}&dirflg=d`
+      : webUrl;
 
     Linking.openURL(url).catch(() => {
-      Linking.openURL(
-        `https://www.google.com/maps/dir/?api=1&destination=${destination.latitude},${destination.longitude}`
-      );
+      Linking.openURL(webUrl);
     });
   };
 
@@ -175,6 +174,9 @@ export function RouteModal({
                 <Pressable onPress={refresh} style={[styles.retryBtn, { backgroundColor: colors.primary }]}>
                   <Text style={styles.retryBtnText}>Tentar novamente</Text>
                 </Pressable>
+                <Pressable onPress={handleOpenMaps} style={[styles.retryBtn, { backgroundColor: colors.secondary }]}>
+                  <Text style={styles.retryBtnText}>Abrir no Google Maps</Text>
+                </Pressable>
               </View>
             </View>
           )}
@@ -209,7 +211,7 @@ export function RouteModal({
 
           {/* Nota sobre serviço de mapas */}
           <Text style={[styles.osrmNote, { color: colors.muted }]}>
-            Rota calculada via OpenStreetMap
+            {route ? 'Rota calculada via OpenStreetMap' : 'Use Google Maps quando a rota interna nao estiver disponivel.'}
           </Text>
 
           {/* Botão Abrir no Google Maps */}
@@ -357,3 +359,4 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
 });
+

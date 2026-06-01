@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useTheme } from '@/hooks/theme/use-theme';
@@ -13,9 +13,11 @@ import {
   isOutdated,
   getPriceConfidence,
   FUEL_TYPE_LABELS,
+  getPriceSource,
+  getPriceSourceLabel,
 } from '@/data/stations';
+import { getStationBrandColor } from '@/constants/brand-colors';
 import * as Haptics from 'expo-haptics';
-import { Platform } from 'react-native';
 
 interface StationCardProps {
   station: Station;
@@ -30,11 +32,19 @@ export function StationCard({ station, fuelType = 'gasolina', showDistance = tru
   const { state, dispatch } = useApp();
 
   const isFavorite = state.favoriteIds.includes(station.id);
-  const price = station.prices.find(p => p.type === fuelType);
+  const price = station.prices.find((p) => p.type === fuelType);
   const category = price ? getPriceCategory(price.price) : 'medium';
   const priceColor = price ? getPriceCategoryColor(category) : colors.muted;
   const outdated = price ? isOutdated(price.updatedAt) : false;
   const confidence = price ? getPriceConfidence(price) : null;
+  const brandColor = getStationBrandColor(station.brand, colors.muted);
+  const priceSource = getPriceSource(price);
+  const sourceLabel = getPriceSourceLabel(price);
+  const distanceLabel = showDistance && station.distance !== undefined
+    ? station.distance < 1
+      ? `${Math.round(station.distance * 1000)}m`
+      : `${station.distance.toFixed(1)}km`
+    : null;
 
   const handlePress = () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -47,63 +57,55 @@ export function StationCard({ station, fuelType = 'gasolina', showDistance = tru
     dispatch({ type: 'TOGGLE_FAVORITE', stationId: station.id });
   };
 
-  const brandColors: Record<string, string> = {
-    'Ipiranga': '#FF6B00',
-    'Shell': '#DD1D21',
-    'BR': '#009B3A',
-    'Ale': '#0066CC',
-    'Bandeirante': '#6B21A8',
-    'Raízen': '#DD1D21',
-  };
-  const brandColor = brandColors[station.brand] ?? colors.muted;
-
   return (
     <Pressable
       onPress={handlePress}
+      accessibilityRole="button"
+      accessibilityLabel={`Abrir posto ${station.name}`}
       style={({ pressed }) => [
         styles.card,
         {
           backgroundColor: colors.surface,
-          opacity: pressed ? 0.85 : 1,
+          borderColor: colors.border,
+          opacity: pressed ? 0.86 : 1,
           transform: [{ scale: pressed ? 0.985 : 1 }],
-          borderRadius: tokens.radius.md,
+          borderRadius: tokens.radius.sm,
           ...tokens.shadows.soft,
         },
         compact && styles.compact,
       ]}
     >
-      {/* Brand strip */}
       <View style={[styles.brandStrip, { backgroundColor: brandColor }]} />
 
       <View style={styles.content}>
-        {/* Header row */}
         <View style={styles.headerRow}>
           <View style={styles.nameBlock}>
             <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
               {station.name}
             </Text>
             <Text style={[styles.address, { color: colors.muted }]} numberOfLines={1}>
-              {station.neighborhood} · {station.address}
+              {station.neighborhood} - {station.address}
             </Text>
           </View>
           <Pressable
             onPress={handleFavorite}
+            accessibilityRole="button"
+            accessibilityLabel={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
             style={({ pressed }) => [styles.favBtn, { opacity: pressed ? 0.6 : 1 }]}
           >
             <IconSymbol
-              name={isFavorite ? 'heart.fill' : 'heart.fill'}
+              name="heart.fill"
               size={20}
               color={isFavorite ? '#EF4444' : colors.border}
             />
           </Pressable>
         </View>
 
-        {/* Price row */}
         <View style={styles.priceRow}>
           <View style={styles.priceBlock}>
             <View style={[styles.priceBadge, { backgroundColor: priceColor + '20' }]}>
               <Text style={[styles.priceValue, { color: priceColor }]}>
-                {price ? `R$ ${price.price.toFixed(2)}` : 'Sem preço'}
+                {price ? `R$ ${price.price.toFixed(2)}` : 'Sem preco'}
               </Text>
             </View>
             <Text style={[styles.fuelLabel, { color: colors.muted }]}>
@@ -112,15 +114,13 @@ export function StationCard({ station, fuelType = 'gasolina', showDistance = tru
           </View>
 
           <View style={styles.metaBlock}>
-            {showDistance && station.distance !== undefined && (
+            {distanceLabel ? (
               <View style={styles.metaItem}>
                 <IconSymbol name="location.fill" size={12} color={colors.muted} />
-                <Text style={[styles.metaText, { color: colors.muted }]}>
-                  {station.distance < 1 ? `${Math.round(station.distance * 1000)}m` : `${station.distance.toFixed(1)}km`}
-                </Text>
+                <Text style={[styles.metaText, { color: colors.muted }]}>{distanceLabel}</Text>
               </View>
-            )}
-            {price && (
+            ) : null}
+            {price ? (
               <View style={styles.metaItem}>
                 <IconSymbol
                   name={outdated ? 'exclamationmark.triangle.fill' : 'clock.fill'}
@@ -131,18 +131,17 @@ export function StationCard({ station, fuelType = 'gasolina', showDistance = tru
                   {outdated ? 'Desatualizado' : formatTimeAgo(price.updatedAt)}
                 </Text>
               </View>
-            )}
-            {price && (
+            ) : null}
+            {price ? (
               <View style={styles.metaItem}>
-                <IconSymbol name="person.2.fill" size={12} color={colors.muted} />
-                <Text style={[styles.metaText, { color: colors.muted }]}>
-                  {price.confirmations}
-                </Text>
+                <IconSymbol name={priceSource === 'sefaz' ? 'checkmark.seal.fill' : 'archivebox.fill'} size={12} color={colors.muted} />
+                <Text style={[styles.metaText, { color: colors.muted }]}>{sourceLabel}</Text>
               </View>
-            )}
+            ) : null}
           </View>
         </View>
-        {confidence && (
+
+        {confidence ? (
           <View
             style={[
               styles.confidenceBadge,
@@ -172,7 +171,7 @@ export function StationCard({ station, fuelType = 'gasolina', showDistance = tru
               {confidence === 'confirmed' ? 'Confirmado' : confidence === 'recent' ? 'Recente' : 'Desatualizado'}
             </Text>
           </View>
-        )}
+        ) : null}
       </View>
     </Pressable>
   );
@@ -184,17 +183,18 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     overflow: 'hidden',
     flexDirection: 'row',
+    borderWidth: 1,
   },
   compact: {
     marginHorizontal: 0,
     marginVertical: 3,
   },
   brandStrip: {
-    width: 6,
+    width: 5,
   },
   content: {
     flex: 1,
-    padding: 16,
+    padding: 14,
     gap: 10,
   },
   headerRow: {
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '800',
     lineHeight: 20,
   },
   address: {
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   },
   priceRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
   },
@@ -233,12 +233,12 @@ const styles = StyleSheet.create({
   },
   priceBadge: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 8,
   },
   priceValue: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '900',
     lineHeight: 22,
   },
   fuelLabel: {
@@ -267,11 +267,11 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 999,
+    borderRadius: 8,
   },
   confidenceText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
     lineHeight: 15,
   },
 });

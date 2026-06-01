@@ -67,6 +67,7 @@ export const contributions = sqliteTable("contributions", {
   stationId: text("stationId").notNull(), // Reference to station mock data
   fuelType: text("fuelType").notNull(), // 'gasolina', 'aditivada', 'etanol', 'diesel', 'gnv'
   price: text("price").notNull(), // Stored as decimal string
+  source: text("source").default("user").notNull(), // 'sefaz' or 'user'
   createdAt: text("createdAt").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 

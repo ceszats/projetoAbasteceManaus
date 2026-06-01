@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import * as ReactNative from "react-native";
 
@@ -29,24 +30,42 @@ export const API_BASE_URL = env.apiBaseUrl;
  * Metro runs on 8081, API server runs on 3000.
  * URL pattern: https://PORT-sandboxid.region.domain
  */
+function getExpoDevHost(): string | null {
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (!hostUri) return null;
+  const host = hostUri.split(":")[0];
+  return host || null;
+}
+
 export function getApiBaseUrl(): string {
-  // If API_BASE_URL is set, use it
-  if (API_BASE_URL) {
-    return API_BASE_URL.replace(/\/$/, "");
+  const fromExtra = Constants.expoConfig?.extra?.apiBaseUrl as string | undefined;
+  const configured = (fromExtra || API_BASE_URL).trim();
+  if (configured) {
+    return configured.replace(/\/$/, "");
   }
 
   // On web, derive from current hostname by replacing port 8081 with 3000
   if (ReactNative.Platform.OS === "web" && typeof window !== "undefined" && window.location) {
     const { protocol, hostname } = window.location;
-    // Pattern: 8081-sandboxid.region.domain -> 3000-sandboxid.region.domain
     const apiHostname = hostname.replace(/^8081-/, "3000-");
     if (apiHostname !== hostname) {
       return `${protocol}//${apiHostname}`;
     }
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return `${protocol}//${hostname}:3000`;
+    }
   }
 
-  // Fallback to empty (will use relative URL)
-  return "";
+  const devHost = getExpoDevHost();
+  if (devHost) {
+    return `http://${devHost}:3000`;
+  }
+
+  if (ReactNative.Platform.OS === "android") {
+    return "http://10.0.2.2:3000";
+  }
+
+  return "http://localhost:3000";
 }
 
 export const SESSION_TOKEN_KEY = "app_session_token";

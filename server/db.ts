@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import { InsertUser, users, userProfiles, contributions, confirmations, stations } from "../drizzle/schema";
@@ -6,6 +6,13 @@ import { ENV } from "./_core/env";
 import type { UserProfile, InsertUserProfile, Contribution, InsertContribution, InsertConfirmation, InsertStation, DbStation } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+
+function ensureColumn(sqlite: Database.Database, table: string, column: string, definition: string) {
+  const columns = sqlite.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  if (!columns.some((row) => row.name === column)) {
+    sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
 
 function ensureLocalSchema(sqlite: Database.Database) {
   sqlite.exec(`
@@ -56,9 +63,16 @@ function ensureLocalSchema(sqlite: Database.Database) {
       stationId text NOT NULL,
       fuelType text NOT NULL,
       price text NOT NULL,
+      source text DEFAULT 'user' NOT NULL,
       createdAt text DEFAULT CURRENT_TIMESTAMP NOT NULL
     );
+
+    CREATE INDEX IF NOT EXISTS idx_contributions_station_fuel
+      ON contributions (stationId, fuelType, createdAt);
   `);
+
+  ensureColumn(sqlite, "contributions", "source", "text DEFAULT 'user' NOT NULL");
+  sqlite.exec(`UPDATE contributions SET source = 'sefaz' WHERE userId = 0 AND source = 'user'`);
 }
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
@@ -230,6 +244,36 @@ export async function addContribution(data: InsertContribution) {
   }
 }
 
+export async function getContributionOverview() {
+  const db = await getDb();
+  if (!db) {
+    return {
+      total: 0,
+      sefaz: 0,
+      user: 0,
+      lastUserContribution: null as string | null,
+      lastSefazContribution: null as string | null,
+    };
+  }
+
+  const rows = await db.select().from(contributions);
+  const lastBySource = (source: "sefaz" | "user") => {
+    const filtered = rows.filter((row) => row.source === source);
+    if (filtered.length === 0) return null;
+    return filtered.reduce((latest, row) => (
+      row.createdAt.localeCompare(latest) > 0 ? row.createdAt : latest
+    ), filtered[0].createdAt);
+  };
+
+  return {
+    total: rows.length,
+    sefaz: rows.filter((row) => row.source === "sefaz" || row.userId === 0).length,
+    user: rows.filter((row) => row.source === "user" && row.userId !== 0).length,
+    lastUserContribution: lastBySource("user"),
+    lastSefazContribution: lastBySource("sefaz"),
+  };
+}
+
 export async function addConfirmation(data: InsertConfirmation) {
   const db = await getDb();
   if (!db) return null;
@@ -258,6 +302,45 @@ export async function getAllContributions(): Promise<Contribution[]> {
   if (!db) return [];
 
   return db.select().from(contributions);
+}
+
+/** Remove contribuições automáticas SEFAZ (userId=0) mais antigas que keepHours */
+export async function pruneSefazContributions(keepHours = 72): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+
+  const cutoff = new Date(Date.now() - keepHours * 60 * 60 * 1000).toISOString();
+  const result = await db
+    .delete(contributions)
+    .where(and(eq(contributions.userId, 0), lt(contributions.createdAt, cutoff)));
+
+  return result.changes ?? 0;
+}
+
+export async function hasSefazContribution(
+  stationId: string,
+  fuelType: string,
+  price: string,
+  createdAt: string,
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const rows = await db
+    .select({ id: contributions.id })
+    .from(contributions)
+    .where(
+      and(
+        eq(contributions.userId, 0),
+        eq(contributions.stationId, stationId),
+        eq(contributions.fuelType, fuelType),
+        eq(contributions.price, price),
+        eq(contributions.createdAt, createdAt),
+      ),
+    )
+    .limit(1);
+
+  return rows.length > 0;
 }
 
 /**
